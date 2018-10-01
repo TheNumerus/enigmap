@@ -1,6 +1,10 @@
 [package]
-name = "enigmap-renderer"
+name = "enigmap_renderer"
 version = "0.1.0"
 authors = ["Petr Volf <Petr.volf216@gmail.com>"]
 
 [dependencies]
+serde = "1.0.79"
+serde_derive = "1.0"
+serde_json = "1.0.31"
+image = "0.20.0"

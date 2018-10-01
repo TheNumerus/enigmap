@@ -1,3 +1,8 @@
+extern crate enigmap_renderer;
+
+use enigmap_renderer::hex;
+
 fn main() {
-    println!("Hello, world!");
+    let h = hex::Hex::new();
+    println!("{:?}", h);
 }
