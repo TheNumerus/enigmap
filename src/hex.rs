@@ -28,5 +28,6 @@ pub enum HexType {
     WATER,
     OCEAN,
     MOUNTAIN,
-    IMPASSABLE
+    IMPASSABLE,
+    ICE
 }
