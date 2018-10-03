@@ -26,8 +26,14 @@ impl Hex {
         };
         // 1.15 is roughly height to width ratio of hexagon
         let center_y =  (y as f32 * 1.1547 * 3.0 / 4.0) + 1.1547 / 2.0 + 0.1;
-        Hex{x: x, y: y, terrain_type: HexType::WATER, center_x: center_x, center_y: center_y}    
+        Hex{x, y, terrain_type: HexType::WATER, center_x, center_y}    
     } 
+}
+
+ impl Default for Hex {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 #[derive(Deserialize, Debug)]

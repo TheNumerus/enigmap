@@ -29,6 +29,6 @@ impl HexMap {
         let absolute_size_x = size_x as f32 + 0.7;
         let absolute_size_y = 1.3547 + (size_y as f32 - 1.0) * 1.1547 * 3.0 / 4.0;
 
-        HexMap{size_x: size_x, size_y: size_y, field: field, absolute_size_x: absolute_size_x, absolute_size_y: absolute_size_y}
+        HexMap{size_x, size_y, field, absolute_size_x, absolute_size_y}
     }
 }

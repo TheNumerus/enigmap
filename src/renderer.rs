@@ -18,13 +18,8 @@ pub fn render(map: &HexMap) -> RgbImage {
 fn render_hex(img: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, hex: &Hex) {
     let center_x = (hex.center_x * MULT) as u32;
     let center_y = (hex.center_y * MULT) as u32;
-    //center pixel
-    //img.put_pixel(center_x, center_y, Rgb([255,255,255]));
     let mut pixels = vec!{(center_x, center_y)};
     //get hex pixels
-    for i in 0..6 {
-        pixels.push(get_hex_vertex(hex, i).unwrap());
-    }
     pixels.append(&mut get_triangle_pixels(Dir::LEFT, get_hex_vertex(hex, 0).unwrap(), get_hex_vertex(hex, 1).unwrap(), (center_x, center_y)));
     pixels.append(&mut get_triangle_pixels(Dir::RIGHT, (center_x, center_y), get_hex_vertex(hex, 2).unwrap(), get_hex_vertex(hex, 1).unwrap()));
     pixels.append(&mut get_triangle_pixels(Dir::LEFT, (center_x, center_y), get_hex_vertex(hex, 2).unwrap(), get_hex_vertex(hex, 3).unwrap()));
@@ -35,9 +30,11 @@ fn render_hex(img: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, hex: &Hex) {
     //color them
     for pixel in &pixels {
         let color = match hex.terrain_type {
-            HexType::WATER => Rgb([60, 80, 255]),
-            HexType::FIELD => Rgb([80, 255, 60]),
-            HexType::ICE => Rgb([220, 220, 220]),
+            HexType::WATER => Rgb([74, 128, 214]),
+            HexType::FIELD => Rgb([116, 191, 84]),
+            HexType::ICE => Rgb([202, 208, 209]),
+            HexType::MOUNTAIN => Rgb([77, 81, 81]),
+            HexType::FOREST => Rgb([86, 161, 54]),
             _ => Rgb([0, 0, 0])
         };
         img.put_pixel(pixel.0, pixel.1, color);
@@ -53,8 +50,8 @@ fn get_hex_vertex(hex: &Hex, index: i8) -> Result<(u32, u32), &'static str> {
     // hexagon height to width ratio
     let ratio = 1.1547;
 
-    let offset_x = 1.0;
-    let offset_y = 1.0;
+    let offset_x = 0.0;
+    let offset_y = 0.0;
     match index {
         0 => Ok((((0.5 + hex.center_x) * MULT - offset_x) as u32, ((-ratio / 4.0 + hex.center_y) * MULT) as u32)),
         1 => Ok((((0.5 + hex.center_x) * MULT - offset_x) as u32, ((ratio / 4.0 + hex.center_y) * MULT) as u32)),
@@ -70,7 +67,6 @@ fn get_triangle_pixels(dir: Dir, upper: (u32, u32), lower: (u32, u32), pointy: (
     let mut pixels = vec!{upper};
     let half_height = pointy.1 - upper.1;
     let width = (pointy.0 as i32 - upper.0 as i32).abs() as f32;
-    //println!{"{:?}", half_height};
     match dir {
         Dir::LEFT => {
             for y in (upper.1)..=(lower.1) {

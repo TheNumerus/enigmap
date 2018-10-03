@@ -4,6 +4,7 @@ extern crate serde;
 extern crate serde_json;
 extern crate image;
 extern crate rand;
+extern crate noise;
 
 pub mod hex;
 pub mod hexmap;
