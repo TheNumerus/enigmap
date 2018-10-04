@@ -35,6 +35,7 @@ fn render_hex(img: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, hex: &Hex) {
             HexType::ICE => Rgb([202, 208, 209]),
             HexType::MOUNTAIN => Rgb([77, 81, 81]),
             HexType::FOREST => Rgb([86, 161, 54]),
+            HexType::OCEAN => Rgb([54, 108, 194]),
             _ => Rgb([0, 0, 0])
         };
         img.put_pixel(pixel.0, pixel.1, color);

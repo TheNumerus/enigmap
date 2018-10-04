@@ -1,15 +1,9 @@
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct Hex {
     pub x: i32,
     pub y: i32,
-
-    #[serde(rename = "terrainType")]
     pub terrain_type: HexType,
-
-    #[serde(rename = "centerX")]
     pub center_x: f32,
-
-    #[serde(rename = "centerY")]
     pub center_y: f32
 }
 
@@ -27,7 +21,11 @@ impl Hex {
         // 1.15 is roughly height to width ratio of hexagon
         let center_y =  (y as f32 * 1.1547 * 3.0 / 4.0) + 1.1547 / 2.0 + 0.1;
         Hex{x, y, terrain_type: HexType::WATER, center_x, center_y}    
-    } 
+    }
+
+    pub fn distance_to(&self, other: &Hex) -> i32 {
+        return ((self.x - other.x).abs() + (self.x + self.y - other.x - other.y).abs() + (self.y - other.y).abs()) / 2
+    }
 }
 
  impl Default for Hex {
@@ -36,7 +34,7 @@ impl Hex {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub enum HexType {
     FIELD,
     FOREST,

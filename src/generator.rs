@@ -53,6 +53,32 @@ pub fn generate_flat(hex_map: &mut HexMap) {
                 hex.terrain_type = HexType::FOREST;
             }
         }
+
+        
+        }
+    // oceans
+    let old_field = hex_map.field.clone();
+    for hex in &mut hex_map.field {
+        // skip everything thats not water
+        match hex.terrain_type {
+            HexType::WATER => {}, 
+            _ => continue
+        };
+        let mut dst_to_land = i32::max_value();
+        for other in &old_field {
+            match other.terrain_type {
+                HexType::WATER | HexType::ICE | HexType::OCEAN => {},
+                _ => {
+                    let dst = hex.distance_to(&other);
+                    if dst < dst_to_land {
+                        dst_to_land = dst;
+                    }
+                }
+            };
+        }
+        if dst_to_land > 3 {
+            hex.terrain_type = HexType::OCEAN;
+        }
     }
 }
 
