@@ -6,7 +6,9 @@ extern crate image;
 extern crate rand;
 extern crate noise;
 
+mod hexmap;
+
 pub mod hex;
-pub mod hexmap;
-pub mod renderer;
-pub mod generator;
+pub use hexmap::HexMap;
+pub mod renderers;
+pub mod generators;

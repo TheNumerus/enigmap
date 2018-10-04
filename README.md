@@ -1,2 +1,2 @@
-# enigmap-renderer
-Renderer for maps in JSON format
+# enigmap
+Hexagonal map generator and renderer

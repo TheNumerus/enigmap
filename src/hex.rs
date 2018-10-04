@@ -24,7 +24,7 @@ impl Hex {
     }
 
     pub fn distance_to(&self, other: &Hex) -> i32 {
-        return ((self.x - other.x).abs() + (self.x + self.y - other.x - other.y).abs() + (self.y - other.y).abs()) / 2
+        ((self.x - other.x).abs() + (self.x + self.y - other.x - other.y).abs() + (self.y - other.y).abs()) / 2
     }
 }
 
