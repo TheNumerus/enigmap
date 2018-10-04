@@ -1,5 +1,5 @@
 [package]
-name = "enigmap_renderer"
+name = "enigmap"
 version = "0.1.0"
 authors = ["Petr Volf <Petr.volf216@gmail.com>"]
 

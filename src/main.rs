@@ -1,9 +1,9 @@
-extern crate enigmap_renderer;
+extern crate enigmap;
 extern crate serde_json;
 
-use enigmap_renderer::renderers::{Renderer, Basic};
-use enigmap_renderer::HexMap;
-use enigmap_renderer::generators::{MapGen, Circle};
+use enigmap::renderers::{Renderer, Basic};
+use enigmap::HexMap;
+use enigmap::generators::{MapGen, Circle};
 
 use std::fs;
 use std::path::Path;
