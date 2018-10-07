@@ -14,8 +14,8 @@ impl Hex {
 
     pub fn from_coords(x: i32, y: i32) -> Hex {
         let center_x  = match y % 2 {
-            0 => (x as f32) + 0.6,
-            1 => (x as f32) + 1.1,
+            0 => (x as f32) + 0.6 + (y/2) as f32,
+            1 => (x as f32) + 1.1 + (y/2) as f32,
             _ => panic!{"shouldn't happen"}
         };
         // 1.15 is roughly height to width ratio of hexagon
@@ -26,6 +26,41 @@ impl Hex {
     pub fn distance_to(&self, other: &Hex) -> i32 {
         ((self.x - other.x).abs() + (self.x + self.y - other.x - other.y).abs() + (self.y - other.y).abs()) / 2
     }
+
+    /// Returns vector of hexes next to specified hex
+    /// TODO: wraparound of coordinates
+    pub fn get_neighbours(hex: &Hex, size_x: i32, size_y: i32) -> Vec<(i32, i32)> {
+        //println!("hex: {:?}", hex);
+        let mut neighbours: Vec<(i32, i32)> = Vec::with_capacity(6);
+
+        // bottom
+        if hex.y != (size_y - 1) {
+            neighbours.push(Hex::unwrap_coords(hex.x - 1, hex.y + 1, size_x, size_y));
+            neighbours.push(Hex::unwrap_coords(hex.x, hex.y + 1, size_x, size_y));
+        }
+
+        // top
+        if hex.y != 0 {
+            neighbours.push(Hex::unwrap_coords(hex.x + 1, hex.y - 1, size_x, size_y));
+            neighbours.push(Hex::unwrap_coords(hex.x, hex.y - 1, size_x, size_y));
+        }
+
+        // sides
+        neighbours.push(Hex::unwrap_coords(hex.x - 1, hex.y, size_x, size_y));
+        neighbours.push(Hex::unwrap_coords(hex.x + 1, hex.y, size_x, size_y));
+        neighbours
+    }
+
+    
+    pub fn unwrap_coords(x: i32, y: i32, size_x: i32, size_y: i32) -> (i32, i32) {
+        let mut new_x = x;
+        if x < -(y/2) {
+            new_x = x + size_x - 1;
+        } else if x >= (size_x - y/2) {
+            new_x = x - size_x;
+        }
+        (new_x, y)
+    }
 }
 
  impl Default for Hex {
@@ -34,7 +69,7 @@ impl Hex {
     }
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, PartialEq)]
 pub enum HexType {
     FIELD,
     FOREST,
