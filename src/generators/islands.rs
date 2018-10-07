@@ -12,7 +12,7 @@ pub struct Islands {
 
 impl Islands {
     /// Generates ice on top and bootom
-    fn ice_pass<T>(&self, hex_map: &mut HexMap, gen: T, noise_scale: f64, seed: u32)
+    fn ice_pass<T>(&self, hex_map: &mut HexMap, gen: &T, noise_scale: f64, seed: u32)
         where T: NoiseFn<[f64; 2]>
     {
         // generate ice
@@ -38,7 +38,7 @@ impl Islands {
         }
     }
 
-    fn land_pass<T>(&self, hex_map: &mut HexMap, gen: T, noise_scale: f64, seed: u32)
+    fn land_pass<T>(&self, hex_map: &mut HexMap, gen: &T, noise_scale: f64, seed: u32)
         where T:NoiseFn<[f64; 2]>
     {
         // generate and clear up small islands
@@ -83,6 +83,43 @@ impl Islands {
         }
     }
 
+    fn ocean_pass<T>(&self, hex_map: &mut HexMap, gen: &T, noise_scale: f64, seed: u32)
+        where T:NoiseFn<[f64; 2]>
+    {
+        let old_field = hex_map.field.clone();
+        for hex in &mut hex_map.field {
+            // skip everything thats not water
+            match hex.terrain_type {
+                HexType::WATER => {}, 
+                _ => continue
+            };
+            let mut dst_to_land = i32::max_value();
+            let noise_val = gen.get([hex.center_x as f64 * noise_scale + seed as f64, hex.center_y as f64 * noise_scale]);
+            // get distance to land
+            for other in &old_field {
+                match other.terrain_type {
+                    HexType::WATER | HexType::ICE | HexType::OCEAN => {},
+                    _ => {
+                        let dst = hex.distance_to(&other);
+                        if dst < dst_to_land {
+                            dst_to_land = dst;
+                        }
+                    }
+                };
+            }
+            // spawn oceans
+            if dst_to_land > 5 || noise_val < 0.14 {
+                hex.terrain_type = HexType::OCEAN;
+            }
+            // make sure we have at least one tile
+            if dst_to_land < 2 {
+                hex.terrain_type = HexType::WATER;
+            }
+        }
+        //clear that up a little bit
+        self.clear_pass(hex_map, HexType::OCEAN, HexType::WATER, 3);
+    }
+
     fn clear_pass(&self, hex_map: &mut HexMap, from: HexType, to: HexType, strength: u32) {
         let old_map = hex_map.clone();
         for hex in &mut hex_map.field {
@@ -124,7 +161,8 @@ impl MapGen for Islands {
         let noise_scale = 60.0 / hex_map.absolute_size_x as f64;
         let land_noise_scale = 8.0 / hex_map.absolute_size_x as f64;
         
-        self.ice_pass(hex_map, w, noise_scale, seed);
-        self.land_pass(hex_map, f, land_noise_scale, seed);
+        self.ice_pass(hex_map, &w, noise_scale, seed);
+        self.land_pass(hex_map, &f, land_noise_scale, seed);
+        self.ocean_pass(hex_map, &f, land_noise_scale, seed);
     }
 }
