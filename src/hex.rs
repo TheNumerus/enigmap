@@ -69,7 +69,7 @@ impl Hex {
     }
 }
 
-#[derive(Deserialize, Debug, Clone, PartialEq)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Copy)]
 pub enum HexType {
     FIELD,
     FOREST,
