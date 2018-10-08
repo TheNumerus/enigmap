@@ -1,5 +1,5 @@
 use rand::prelude::*;
-use noise::{Fbm, NoiseFn, Seedable, Worley};
+use noise::{Fbm, NoiseFn, Seedable, Worley, Perlin};
 use std::f32;
 
 use hexmap::HexMap;
@@ -56,30 +56,79 @@ impl Islands {
         }
 
         // create up to three bigger landmasses
+        // choose random points at centers of those landmasses
         let mut rng = thread_rng();
-        let mut start_points: [(f32, f32); 3] = [(0.0, 0.0), (0.0, 0.0), (0.0, 0.0)];
-        for i in 0..3 {
+        for _ in 0..3 {
+            // get first focus
             let x: f32 = rng.gen_range(0.0, hex_map.absolute_size_x);
-            let y: f32 = rng.gen_range(0.1 * hex_map.absolute_size_y, 0.9 * hex_map.absolute_size_y);
-            start_points[i] = (x,y);
-        }
-        for i in 0..3 {
-            let mut nearest_hex = Hex::default();
-            let mut current_dst = f32::MAX;
-            for hex in &hex_map.field {
-                let dst_x = hex.center_x - start_points[i].0;
-                let dst_y = hex.center_y - start_points[i].1;
-                let dst = (dst_x.powi(2) + dst_y.powi(2)).sqrt();
-                if dst < current_dst {
-                    nearest_hex = hex.clone();
-                    current_dst = dst;
+            let y: f32 = rng.gen_range(0.1, 0.9) * hex_map.absolute_size_y;
+            let first_focus = (x,y);
+
+            // get aproximate center of the map
+            let center = (hex_map.absolute_size_x / 2.0 + rng.gen_range(-10.0, 10.0), hex_map.absolute_size_y / 2.0 + rng.gen_range(-10.0, 10.0));
+
+            // get unit vector with direction from first focus to center
+            let mut vector = (center.0 - first_focus.0, center.1 - first_focus.1);
+            let len = (vector.0.powi(2) + vector.1.powi(2)).sqrt();
+            vector.0 /= len;
+            vector.1 /= len;
+
+            // multiply it by random value and get second focus
+            let island_len: f32 = rng.gen_range(hex_map.absolute_size_y / 4.0, hex_map.absolute_size_y / 2.5);
+            let second_focus = (first_focus.0 + vector.0 * island_len, first_focus.1 + vector.1 * island_len);
+
+            // between them is center of the big island
+            let center_focus = ((first_focus.0 + second_focus.0) / 2.0, (first_focus.1 + second_focus.1) / 2.0);
+
+            // now generate landmasses
+            for hex in &mut hex_map.field {
+                // skip tiles that aren't water
+                match hex.terrain_type {
+                    HexType::WATER => {},
+                    _ => continue
+                };
+                let noise_val = gen.get([hex.center_x as f64 * noise_scale + seed as f64, hex.center_y as f64 * noise_scale]);
+                // get distances to selecte points and generate islands from those
+                let first_dst = ((hex.center_x - first_focus.0).powi(2) + (hex.center_y - first_focus.1).powi(2)).sqrt();
+                let second_dst = ((hex.center_x - second_focus.0).powi(2) + (hex.center_y - second_focus.1).powi(2)).sqrt();
+                let center_dst = ((hex.center_x - center_focus.0).powi(2) + (hex.center_y - center_focus.1).powi(2)).sqrt() * 0.6;
+                let elipse_dst = f32::min(center_dst, f32::min(first_dst, second_dst));
+                if (noise_val as f32 * 3.0 + elipse_dst) < 4.0 {
+                    hex.terrain_type = HexType::FIELD;
                 }
             }
         }
-        for hex in &mut hex_map.field {
-            if let HexType::WATER = hex.terrain_type {
+    }
 
+    fn decorator_pass<T>(&self, hex_map: &mut HexMap, gen: &T, noise_scale: f64, seed: u32)
+        where T:NoiseFn<[f64; 2]>
+    {
+        for hex in &mut hex_map.field {
+            // skip everything thats not land
+            match hex.terrain_type {
+                HexType::FIELD => {}, 
+                _ => continue
+            };
+            let dst_to_edge = 1.0 - ((hex.center_y / hex_map.absolute_size_y - 0.5).abs() * 2.0);
+            let noise_val = gen.get([hex.center_x as f64 * noise_scale + seed as f64, hex.center_y as f64 * noise_scale]);
+            let temperature = 70.0 * dst_to_edge - 20.0 + noise_val as f32 * 5.0;
+            hex.terrain_type = if temperature < -5.0 {
+                HexType::TUNDRA
+            } else if temperature > -5.0 && temperature < 25.0 && noise_val > -0.6 {
+                HexType::FOREST
+            } else if temperature > 35.0 && noise_val > -0.6 {
+                HexType::DESERT
+            } else {
+                HexType::FIELD
+            };
+
+            // random mountains
+            if let HexType::FIELD = hex.terrain_type {
+                if random::<f32>() < 0.08 {
+                    hex.terrain_type = HexType::MOUNTAIN;
+                }
             }
+            // TODO jungles
         }
     }
 
@@ -151,10 +200,11 @@ impl MapGen for Islands {
         // init generators
         let w = Worley::new();
         let f = Fbm::new();
+        let p = Perlin::new();
         let seed = random::<u32>();
         println!("seed: {:?}", seed);
         w.set_seed(seed);
-        //f.set_seed(seed);
+        p.set_seed(seed);
         w.enable_range(true);
 
         // noise scale
@@ -163,6 +213,7 @@ impl MapGen for Islands {
         
         self.ice_pass(hex_map, &w, noise_scale, seed);
         self.land_pass(hex_map, &f, land_noise_scale, seed);
+        self.decorator_pass(hex_map, &p, noise_scale, seed);
         self.ocean_pass(hex_map, &f, land_noise_scale, seed);
     }
 }

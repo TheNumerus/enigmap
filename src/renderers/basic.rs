@@ -85,6 +85,8 @@ impl Basic {
                 HexType::MOUNTAIN => Rgb([77, 81, 81]),
                 HexType::FOREST => Rgb([86, 161, 54]),
                 HexType::OCEAN => Rgb([54, 108, 194]),
+                HexType::TUNDRA => Rgb([62, 81, 77]),
+                HexType::DESERT => Rgb([214, 200, 109]),
                 _ => Rgb([0, 0, 0])
             };
             img.put_pixel(pixel.0, pixel.1, color);
