@@ -2,6 +2,7 @@ use image::{RgbImage, ImageBuffer, Rgb};
 use hexmap::HexMap;
 use hex::{Hex, HexType};
 use renderers::Renderer;
+use rand::prelude::*;
 
 pub struct Basic {
     pub multiplier: f32,
@@ -65,8 +66,10 @@ impl Basic {
     }
 
     fn render_hex(&self, img: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, hex: &Hex) {
+        let mut rng = thread_rng();
         let center_x = (hex.center_x * self.multiplier) as u32;
         let center_y = (hex.center_y * self.multiplier) as u32;
+        let color_diff = rng.gen_range(0.98, 1.02);
         let mut pixels = vec!{(center_x, center_y)};
         //get hex pixels
         pixels.append(&mut self.get_triangle_pixels(Dir::LEFT, self.get_hex_vertex(hex, 0).unwrap(), self.get_hex_vertex(hex, 1).unwrap(), (center_x, center_y)));
@@ -78,7 +81,7 @@ impl Basic {
 
         //color them
         for pixel in &pixels {
-            let color = match hex.terrain_type {
+            let mut color = match hex.terrain_type {
                 HexType::WATER => Rgb([74, 128, 214]),
                 HexType::FIELD => Rgb([116, 191, 84]),
                 HexType::ICE => Rgb([202, 208, 209]),
@@ -89,6 +92,9 @@ impl Basic {
                 HexType::DESERT => Rgb([214, 200, 109]),
                 _ => Rgb([0, 0, 0])
             };
+            for i in 0..3 {
+                color.data[i] = (color.data[i] as f32 * color_diff) as u8;
+            }
             img.put_pixel(pixel.0, pixel.1, color);
         }
     }
