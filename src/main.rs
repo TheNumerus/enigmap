@@ -3,13 +3,13 @@ extern crate serde_json;
 
 use enigmap::renderers::{Renderer, Basic};
 use enigmap::HexMap;
-use enigmap::generators::{MapGen, Circle, Islands};
+use enigmap::generators::{MapGen, Islands};
 
 use std::fs;
 use std::path::Path;
 use std::time::Instant;
 
-fn main() {
+fn main() -> Result<(), std::io::Error> {
     // initialize map
     let mut hexmap = HexMap::new(100,75);
 
@@ -26,7 +26,8 @@ fn main() {
     let time = Instant::now();
 
     // render image
-    let renderer = Basic::default();
+    let mut renderer = Basic::default();
+    renderer.multiplier = 25.0;
     let img = renderer.render(&hexmap);
 
     println!("Rendering took {}.{:03} seconds", time.elapsed().as_secs(), time.elapsed().subsec_millis());
@@ -34,9 +35,10 @@ fn main() {
     // create folder for image if needed
     let path = "./out";
     if !Path::new(path).exists() {
-        fs::create_dir("./out").unwrap();
+        fs::create_dir("./out")?;
     }
 
     // save image
-    img.save("./out/image.png").unwrap();
+    img.save("./out/image.png")?;
+    Ok(())
 }

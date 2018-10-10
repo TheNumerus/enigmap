@@ -1,6 +1,6 @@
 use image::{RgbImage, ImageBuffer, Rgb};
 use hexmap::HexMap;
-use hex::{Hex, HexType};
+use hex::{Hex, HexType, RATIO};
 use renderers::Renderer;
 use rand::prelude::*;
 
@@ -13,52 +13,49 @@ impl Basic {
     //  4     0
     //  3     1
     //     2
-    fn get_hex_vertex(&self, hex: &Hex, index: i8) -> Result<(u32, u32), &'static str> {
-        // hexagon height to width ratio
-        let ratio = 1.1547;
-
-        let offset_x = 0.0;
-        let offset_y = 0.0;
-        match index {
-            0 => Ok((((0.5 + hex.center_x) * self.multiplier - offset_x) as u32, ((-ratio / 4.0 + hex.center_y) * self.multiplier) as u32)),
-            1 => Ok((((0.5 + hex.center_x) * self.multiplier - offset_x) as u32, ((ratio / 4.0 + hex.center_y) * self.multiplier) as u32)),
-            2 => Ok(((hex.center_x * self.multiplier) as u32, ((ratio / 2.0 + hex.center_y) * self.multiplier - offset_y) as u32)),
-            3 => Ok((((-0.5 + hex.center_x) * self.multiplier + offset_x) as u32, ((ratio / 4.0 + hex.center_y) * self.multiplier) as u32)),
-            4 => Ok((((-0.5 + hex.center_x) * self.multiplier + offset_x) as u32, ((-ratio / 4.0 + hex.center_y) * self.multiplier) as u32)),
-            5 => Ok(((hex.center_x * self.multiplier) as u32, ((-ratio / 2.0 + hex.center_y) * self.multiplier + offset_y) as u32)),
-            _ => Err("invalid index"),
+    fn get_hex_vertex(&self, hex: &Hex, index: usize) -> Result<(u32, u32), &'static str> {
+        if index > 5 {
+            return Err("index out of range")
         }
+        // get hex relative coords
+        let sides_x = 0.5;
+        let sides_y = RATIO / 4.0;
+        let bottom_y = RATIO / 2.0;
+        let mut coords = match index {
+            0 => (sides_x, -sides_y),
+            1 => (sides_x, sides_y),
+            2 => (0.0, bottom_y),
+            3 => (-sides_x, sides_y),
+            4 => (-sides_x, -sides_y),
+            _ => (0.0, -bottom_y),
+        };
+        // add absolute coords
+        coords.0 += hex.center_x;
+        coords.1 += hex.center_y;
+        // miltiply by multiplier
+        Ok(((coords.0 * self.multiplier) as u32, (coords.1 * self.multiplier) as u32))
     }
 
-    fn get_triangle_pixels(&self, dir: Dir, upper: (u32, u32), lower: (u32, u32), pointy: (u32, u32)) -> Vec<(u32, u32)> {
+    fn get_triangle_pixels(&self, upper: (u32, u32), lower: (u32, u32), pointy: (u32, u32)) -> Vec<(u32, u32)> {
         let mut pixels = vec!{upper};
         let half_height = pointy.1 - upper.1;
         let width = (pointy.0 as i32 - upper.0 as i32).abs() as f32;
-        match dir {
-            Dir::LEFT => {
-                for y in (upper.1)..=(lower.1) {
-                    //distance on Y axis between the pointy bit and upper limit
-                    let mut current_pos = y - upper.1;
-                    if current_pos > half_height {
-                        current_pos = 2 * (half_height + 1) - current_pos;
-                    }
-                    let start = (((half_height + 1) - current_pos) as f32 / half_height as f32 * width) as u32 + pointy.0;
-                    for x in start..=upper.0 {
-                        pixels.push((x, y));
-                    }
+        for y in (upper.1)..=(lower.1) {
+            //distance on Y axis between the pointy bit and upper limit
+            let mut current_pos = y - upper.1;
+            if current_pos > half_height {
+                current_pos = 2 * (half_height + 1) - current_pos;
+            }
+            // change start and end, because of direction
+            if upper.0 > pointy.0 {
+                let start = (((half_height + 1) - current_pos) as f32 / half_height as f32 * width) as u32 + pointy.0;
+                for x in start..=upper.0 {
+                    pixels.push((x, y));
                 }
-            },
-            Dir::RIGHT => {
-                for y in (upper.1)..=(lower.1) {
-                    //distance on Y axis between the pointy bit and upper limit
-                    let mut current_pos = y - upper.1;
-                    if current_pos > half_height {
-                        current_pos = 2 * (half_height + 1) - current_pos;
-                    }
-                    let start = (current_pos as f32 / half_height as f32 * width) as u32 + upper.0;
-                    for x in upper.0..=start {
-                        pixels.push((x, y));
-                    }
+            } else {
+                let start = (current_pos as f32 / half_height as f32 * width) as u32 + upper.0;
+                for x in upper.0..=start {
+                    pixels.push((x, y));
                 }
             }
         }
@@ -67,19 +64,25 @@ impl Basic {
 
     fn render_hex(&self, img: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, hex: &Hex) {
         let mut rng = thread_rng();
-        let center_x = (hex.center_x * self.multiplier) as u32;
-        let center_y = (hex.center_y * self.multiplier) as u32;
+        let center_point = ((hex.center_x * self.multiplier) as u32, (hex.center_y * self.multiplier) as u32);
+        // randomize color a little bit
         let color_diff = rng.gen_range(0.98, 1.02);
-        let mut pixels = vec!{(center_x, center_y)};
-        //get hex pixels
-        pixels.append(&mut self.get_triangle_pixels(Dir::LEFT, self.get_hex_vertex(hex, 0).unwrap(), self.get_hex_vertex(hex, 1).unwrap(), (center_x, center_y)));
-        pixels.append(&mut self.get_triangle_pixels(Dir::RIGHT, (center_x, center_y), self.get_hex_vertex(hex, 2).unwrap(), self.get_hex_vertex(hex, 1).unwrap()));
-        pixels.append(&mut self.get_triangle_pixels(Dir::LEFT, (center_x, center_y), self.get_hex_vertex(hex, 2).unwrap(), self.get_hex_vertex(hex, 3).unwrap()));
-        pixels.append(&mut self.get_triangle_pixels(Dir::RIGHT, self.get_hex_vertex(hex, 4).unwrap(), self.get_hex_vertex(hex, 3).unwrap(), (center_x, center_y)));
-        pixels.append(&mut self.get_triangle_pixels(Dir::LEFT, self.get_hex_vertex(hex, 5).unwrap(), (center_x, center_y), self.get_hex_vertex(hex, 4).unwrap()));
-        pixels.append(&mut self.get_triangle_pixels(Dir::RIGHT, self.get_hex_vertex(hex, 5).unwrap(), (center_x, center_y), self.get_hex_vertex(hex, 0).unwrap()));
 
-        //color them
+        // get hex vertices positions
+        let mut points: Vec<(u32, u32)> = Vec::with_capacity(6);
+        for i in 0..6 {
+            points.push(self.get_hex_vertex(hex, i).unwrap());
+        }
+        // get hex pixels
+        let mut pixels = vec!{center_point};
+        pixels.append(&mut self.get_triangle_pixels(points[0], points[1], center_point));
+        pixels.append(&mut self.get_triangle_pixels(center_point, points[2], points[1]));
+        pixels.append(&mut self.get_triangle_pixels(center_point, points[2], points[3]));
+        pixels.append(&mut self.get_triangle_pixels(points[4], points[3], center_point));
+        pixels.append(&mut self.get_triangle_pixels(points[5], center_point, points[4]));
+        pixels.append(&mut self.get_triangle_pixels(points[5], center_point, points[0]));
+
+        // color them
         for pixel in &pixels {
             let mut color = match hex.terrain_type {
                 HexType::WATER => Rgb([74, 128, 214]),
@@ -129,9 +132,4 @@ impl Renderer for Basic {
         }
         imgbuf
     }
-}
-
-enum Dir {
-    LEFT,
-    RIGHT
 }

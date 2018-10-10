@@ -21,7 +21,7 @@ impl Islands {
             let worley_val = gen.get([hex.center_x as f64 * noise_scale + seed as f64, hex.center_y as f64 * noise_scale]);
             let dst_to_edge = 1.0 - ((hex.center_y / hex_map.absolute_size_y - 0.5).abs() * 2.0);
             
-            // make sure ice is certain to apear
+            // make sure ice is certain to appear
             if hex.y == 0 || hex.y == (hex_map.size_y - 1) {
                 hex.terrain_type = HexType::ICE;
             }
@@ -55,7 +55,7 @@ impl Islands {
             self.clear_pass(hex_map, HexType::WATER, HexType::FIELD, 3);
         }
 
-        // create up to three bigger landmasses
+        // create bigger landmasses
         // choose random points at centers of those landmasses
         let mut rng = thread_rng();
         for _ in 0..3 {
@@ -177,13 +177,11 @@ impl Islands {
             for (neighbour_x, neighbour_y) in Hex::get_neighbours(&hex, hex_map.size_x, hex_map.size_y) {
                 let index = HexMap::coords_to_index(neighbour_x, neighbour_y, old_map.size_x, old_map.size_y);
                 if hex.terrain_type != old_map.field[index].terrain_type {
-                    diff_neighbours = diff_neighbours + 1;
+                    diff_neighbours += 1;
                 }
             }
-            if diff_neighbours > strength {
-                if from == hex.terrain_type {
-                    hex.terrain_type = to;
-                }
+            if diff_neighbours > strength && from == hex.terrain_type {
+                hex.terrain_type = to;
             }
         }
     }

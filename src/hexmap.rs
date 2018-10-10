@@ -1,4 +1,4 @@
-use hex::Hex;
+use hex::{RATIO, Hex};
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct HexMap {
@@ -18,7 +18,7 @@ impl HexMap {
             field.push(hex);
         }
         let absolute_size_x = size_x as f32 + 0.7;
-        let absolute_size_y = 1.3547 + (size_y as f32 - 1.0) * 1.1547 * 3.0 / 4.0;
+        let absolute_size_y = RATIO + 0.2 + (size_y as f32 - 1.0) * RATIO * 3.0 / 4.0;
 
         HexMap{size_x, size_y, field, absolute_size_x, absolute_size_y}
     }
@@ -26,8 +26,11 @@ impl HexMap {
     pub fn coords_to_index(x: i32, y: i32, size_x: i32, size_y: i32) -> usize {
         let base = y * size_x;
         let offset = y / 2;
-        //println!("base: {}, offset: {}", base, offset);
-        (base + x + offset) as usize
+        let index = (base + x + offset) as usize;
+        if index > (size_x * size_y) as usize {
+            panic!{"index {} out of range", index};
+        }
+        index
     }
 
     pub fn index_to_coords(i: i32, size_x: i32, size_y: i32) -> (i32, i32) {
