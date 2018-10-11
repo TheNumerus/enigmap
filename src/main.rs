@@ -1,7 +1,7 @@
 extern crate enigmap;
 extern crate serde_json;
 
-use enigmap::renderers::{Renderer, Basic};
+use enigmap::renderers::{Renderer, Basic, OGL};
 use enigmap::HexMap;
 use enigmap::generators::{MapGen, Islands};
 
@@ -26,8 +26,8 @@ fn main() -> Result<(), std::io::Error> {
     let time = Instant::now();
 
     // render image
-    let mut renderer = Basic::default();
-    renderer.multiplier = 25.0;
+    let mut renderer = OGL::default();
+    //renderer.multiplier = 25.0;
     let img = renderer.render(&hexmap);
 
     println!("Rendering took {}.{:03} seconds", time.elapsed().as_secs(), time.elapsed().subsec_millis());

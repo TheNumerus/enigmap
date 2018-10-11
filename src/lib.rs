@@ -5,6 +5,8 @@ extern crate serde_json;
 extern crate image;
 extern crate rand;
 extern crate noise;
+#[macro_use]
+extern crate glium;
 
 mod hexmap;
 
