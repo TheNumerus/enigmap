@@ -93,6 +93,7 @@ impl Basic {
                 HexType::OCEAN => Rgb([54, 108, 194]),
                 HexType::TUNDRA => Rgb([62, 81, 77]),
                 HexType::DESERT => Rgb([214, 200, 109]),
+                HexType::JUNGLE => Rgb([64, 163, 16]),
                 _ => Rgb([0, 0, 0])
             };
             for i in 0..3 {
@@ -105,12 +106,11 @@ impl Basic {
     // public functions
 
     /// Set scale of rendered hexagons
-    pub fn set_scale(&mut self, scale: f32) -> Result<bool, String> {
+    pub fn set_scale(&mut self, scale: f32) {
         if scale > 0.0 {
             self.multiplier = scale;
-            Ok(true)
         } else {
-            Err(format!{"Invalid scale, tried to set {:?}, only positive values accepted", scale})
+            panic!("Invalid scale, only positive values accepted")
         }
     }
 }

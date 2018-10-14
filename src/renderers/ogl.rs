@@ -7,20 +7,20 @@ use hex::{Hex, HexType, RATIO};
 use renderers::Renderer;
 
 
-pub struct OGL;
+pub struct OGL {
+    multiplier: f32,
+}
 
 impl OGL {
     fn get_hex_points(hex: &Hex) -> Vec<Vertex> {
         let mut verts: Vec<Vertex> = Vec::new();
-        for i in 0..5 {
-            verts.push(Vertex::from_tupple(OGL::get_hex_vertex(hex, i + 1).unwrap()));
-            verts.push(Vertex::from_tupple(OGL::get_hex_vertex(hex, i).unwrap()));
-            verts.push(Vertex::from_tupple((hex.center_x, hex.center_y)));
-        }
-        // now add the last one
-        verts.push(Vertex::from_tupple(OGL::get_hex_vertex(hex, 0).unwrap()));
+        // divide hex into 4 triangles
         verts.push(Vertex::from_tupple(OGL::get_hex_vertex(hex, 5).unwrap()));
-        verts.push(Vertex::from_tupple((hex.center_x, hex.center_y)));
+        verts.push(Vertex::from_tupple(OGL::get_hex_vertex(hex, 4).unwrap()));
+        verts.push(Vertex::from_tupple(OGL::get_hex_vertex(hex, 0).unwrap()));
+        verts.push(Vertex::from_tupple(OGL::get_hex_vertex(hex, 3).unwrap()));
+        verts.push(Vertex::from_tupple(OGL::get_hex_vertex(hex, 1).unwrap()));
+        verts.push(Vertex::from_tupple(OGL::get_hex_vertex(hex, 2).unwrap()));
         verts
     }
 
@@ -50,6 +50,15 @@ impl OGL {
         // miltiply by multiplier
         Ok((coords.0, coords.1))
     }
+
+    /// Set scale of rendered hexagons
+    pub fn set_scale(&mut self, scale: f32) {
+        if scale > 0.0 {
+            self.multiplier = scale;
+        } else {
+            panic!("Invalid scale, only positive values accepted")
+        }
+    }
 }
 
 impl Renderer for OGL {
@@ -60,15 +69,17 @@ impl Renderer for OGL {
         let context = glutin::ContextBuilder::new().with_vsync(true).with_multisampling(2);
         let display = Display::new(window, context, &events_loop).unwrap();
 
+        let mut rng = thread_rng();
+
         let shape: Vec<Vertex> = OGL::get_hex_points(&map.field[0]);
         let vertex_buffer = VertexBuffer::new(&display, &shape).unwrap();
 
         implement_vertex!(Vertex, position);
-        let indices = index::NoIndices(index::PrimitiveType::TrianglesList);
+        let indices = index::NoIndices(index::PrimitiveType::TriangleStrip);
 
 
         // get instance parameters
-        let mut per_instance = {
+        let per_instance = {
             #[derive(Copy, Clone)]
             struct Attr {
                 world_position: (f32, f32),
@@ -78,7 +89,8 @@ impl Renderer for OGL {
             implement_vertex!(Attr, world_position, color);
 
             let data = map.field.iter().map(|hex| {
-                let color = match hex.terrain_type {
+                let color_diff = rng.gen_range(0.98, 1.02);
+                let mut color = match hex.terrain_type {
                     HexType::WATER => (0.29, 0.5, 0.84),
                     HexType::FIELD => (0.45, 0.75, 0.33),
                     HexType::ICE => (0.79, 0.82, 0.82),
@@ -86,9 +98,13 @@ impl Renderer for OGL {
                     HexType::FOREST => (0.38, 0.6, 0.2),
                     HexType::OCEAN => (0.23, 0.45, 0.8),
                     HexType::TUNDRA => (0.3, 0.4, 0.38),
-                    HexType::DESERT => (0.85, 0.84, 0.75),
+                    HexType::DESERT => (0.85, 0.83, 0.70),
+                    HexType::JUNGLE => (0.34, 0.65, 0.1),
                     _ => (0.0, 0.0, 0.0)
                 };
+                color.0 *= color_diff;
+                color.1 *= color_diff;
+                color.2 *= color_diff;
                 Attr {
                     world_position: (hex.center_x - 0.5, hex.center_y - RATIO / 2.0),
                     color
@@ -158,7 +174,7 @@ impl Renderer for OGL {
 
 impl Default for OGL {
     fn default() -> OGL {
-        OGL{}
+        OGL{multiplier: 50.0}
     }
 }
 

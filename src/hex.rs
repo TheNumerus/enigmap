@@ -79,5 +79,6 @@ pub enum HexType {
     OCEAN,
     MOUNTAIN,
     IMPASSABLE,
-    ICE
+    ICE,
+    JUNGLE
 }

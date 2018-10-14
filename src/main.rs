@@ -27,7 +27,7 @@ fn main() -> Result<(), std::io::Error> {
 
     // render image
     let mut renderer = OGL::default();
-    //renderer.multiplier = 25.0;
+    renderer.set_scale(25.0);
     let img = renderer.render(&hexmap);
 
     println!("Rendering took {}.{:03} seconds", time.elapsed().as_secs(), time.elapsed().subsec_millis());
