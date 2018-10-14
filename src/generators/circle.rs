@@ -12,16 +12,19 @@ pub struct Circle {
     pub ice_falloff: f32,
     pub mountain_percentage: f32,
     pub ocean_distance: i32,
+    seed: u32,
+    using_seed: bool,
 }
 
 impl Default for Circle {
     fn default() -> Circle {
-        Circle{ring_size: 10.0, ice_falloff: 1.8, mountain_percentage: 0.08, ocean_distance: 3}
+        Circle{ring_size: 10.0, ice_falloff: 1.8, mountain_percentage: 0.08, ocean_distance: 3, seed: 0, using_seed: false}
     }
 }
 
 impl MapGen for Circle {
     fn generate(&self, hex_map: &mut HexMap) {
+        println!("WARNING! This generator is not yet seedable.");
         // noise generator
         let p = Perlin::new();
         let seed = random::<u32>();
@@ -85,5 +88,10 @@ impl MapGen for Circle {
                 hex.terrain_type = HexType::OCEAN;
             }
         }
+    }
+
+    fn set_seed(&mut self, seed: u32) {
+        self.using_seed = true;
+        self.seed = seed;
     }
 }

@@ -1,4 +1,5 @@
 use rand::prelude::*;
+use rand::rngs::StdRng;
 use noise::{Fbm, NoiseFn, Seedable, Worley, Perlin};
 use std::f32;
 
@@ -7,7 +8,8 @@ use hex::{Hex, HexType};
 use generators::MapGen;
 
 pub struct Islands {
-
+    seed: u32,
+    using_seed: bool,
 }
 
 impl Islands {
@@ -57,7 +59,7 @@ impl Islands {
 
         // create bigger landmasses
         // choose random points at centers of those landmasses
-        let mut rng = thread_rng();
+        let mut rng = StdRng::from_seed(Islands::seed_to_rng_seed(seed));
         for _ in 0..3 {
             // get first focus
             let x: f32 = rng.gen_range(0.0, hex_map.absolute_size_x);
@@ -103,11 +105,13 @@ impl Islands {
     fn decorator_pass<T>(&self, hex_map: &mut HexMap, gen: &T, noise_scale: f64, seed: u32)
         where T:NoiseFn<[f64; 2]>
     {
+
+        let mut rng = StdRng::from_seed(Islands::seed_to_rng_seed(seed));
         for hex in &mut hex_map.field {
             // skip everything thats not land and generate mountains
             match hex.terrain_type {
                 HexType::FIELD => {
-                    if random::<f32>() < 0.04 {
+                    if rng.gen::<f32>() < 0.04 {
                         hex.terrain_type = HexType::MOUNTAIN;
                         continue;
                     }
@@ -235,11 +239,16 @@ impl Islands {
             }
         }
     }
+
+    fn seed_to_rng_seed(seed: u32) -> [u8; 32] {
+        let mut array: [u8; 32] = [0; 32];
+        array
+    }
 }
 
 impl Default for Islands {
     fn default() -> Islands {
-        Islands{}
+        Islands{seed: 0, using_seed: false}
     }
 }
 
@@ -249,7 +258,10 @@ impl MapGen for Islands {
         let w = Worley::new();
         let f = Fbm::new();
         let p = Perlin::new();
-        let seed = random::<u32>();
+        let seed = match self.using_seed {
+            false => random::<u32>(),
+            true => self.seed,
+        };
         println!("seed: {:?}", seed);
         w.set_seed(seed);
         p.set_seed(seed);
@@ -263,5 +275,10 @@ impl MapGen for Islands {
         self.land_pass(hex_map, &f, land_noise_scale, seed);
         self.decorator_pass(hex_map, &p, noise_scale, seed);
         self.ocean_pass(hex_map, &f, land_noise_scale, seed);
+    }
+
+    fn set_seed(&mut self, seed: u32) {
+        self.using_seed = true;
+        self.seed = seed;
     }
 }
