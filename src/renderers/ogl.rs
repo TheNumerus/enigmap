@@ -114,35 +114,8 @@ impl Renderer for OGL {
             vertex::VertexBuffer::dynamic(&display, &data).unwrap()
         };
 
-        let vertex_shader_src = r#"
-            #version 140
-
-            uniform float total_x;
-            uniform float total_y;
-
-            in vec2 position;
-            in vec2 world_position;
-            in vec3 color;
-
-            out vec3 v_color;
-
-            void main() {
-                gl_Position = vec4((position.x + world_position.x)/total_x*2 - 1, (-(position.y + world_position.y)/total_y*2) + 1, 0.0, 1.0);
-                v_color = color;
-            }
-        "#;
-
-        let fragment_shader_src = r#"
-            #version 140
-
-            in vec3 v_color;
-
-            out vec4 color;
-
-            void main() {
-                color = vec4(pow(v_color.x, 2.2), pow(v_color.y, 2.2), pow(v_color.z, 2.2), 1.0);
-            }
-        "#;
+        let vertex_shader_src = include_str!("vert.glsl");
+        let fragment_shader_src = include_str!("frag.glsl");
 
         let program = Program::from_source(&display, vertex_shader_src, fragment_shader_src, None).unwrap();
 
