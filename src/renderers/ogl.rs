@@ -72,6 +72,8 @@ impl Renderer for OGL {
         let context = glutin::ContextBuilder::new().with_multisampling(8);
         let display = Display::new(window, context, &events_loop).unwrap();
 
+        display.gl_window().hide();
+
         let mut rng = thread_rng();
 
         let shape: Vec<Vertex> = OGL::get_hex_points(&map.field[0]);
@@ -117,16 +119,17 @@ impl Renderer for OGL {
             vertex::VertexBuffer::dynamic(&display, &data).unwrap()
         };
 
+        // keep shaders in different files and include them on compile
         let vertex_shader_src = include_str!("vert.glsl");
         let fragment_shader_src = include_str!("frag.glsl");
 
         let program = Program::from_source(&display, vertex_shader_src, fragment_shader_src, None).unwrap();
 
-        let mut imgbuf;
         // rendering
         let mut target = display.draw();
         target.clear_color(0.0, 0.0, 0.0, 1.0);
-        target.draw((&vertex_buffer, per_instance.per_instance().unwrap()), &indices, &program, &uniform! {total_x: map.absolute_size_x, total_y: map.absolute_size_y }, &Default::default()).unwrap();
+        target.draw((&vertex_buffer, per_instance.per_instance().unwrap()),
+            &indices, &program, &uniform! {total_x: map.absolute_size_x, total_y: map.absolute_size_y }, &Default::default()).unwrap();
         target.finish().unwrap();
 
         // reading the front buffer into an image
@@ -139,7 +142,7 @@ impl Renderer for OGL {
             new_data.push(chunk[1]);
             new_data.push(chunk[2]);
         }
-        imgbuf = ImageBuffer::from_raw(image.width, image.height, new_data).unwrap();
+        let mut imgbuf = ImageBuffer::from_raw(image.width, image.height, new_data).unwrap();
         imgbuf = DynamicImage::ImageRgb8(imgbuf).flipv().to_rgb();
         imgbuf
     }

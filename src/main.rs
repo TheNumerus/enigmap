@@ -40,7 +40,7 @@ fn main() -> Result<(), std::io::Error> {
 
     // render image
     let mut renderer = OGL::default();
-    renderer.set_scale(25.0);
+    renderer.set_scale(10.0);
 
     // bench renderer
     let time = Instant::now();
