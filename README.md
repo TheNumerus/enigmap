@@ -1,16 +1,17 @@
 # enigmap
 Hexagonal map generator and renderer written in Rust.
+```rust
+use enigmap::generators::{MapGen, Islands};
+use enigmap::renderers::{Renderer, OGL};
 
-    use enigmap::generators::{MapGen, Islands};
-    use enigmap::renderers::{Renderer, OGL};
+let mut hexmap = HexMap::new(100,75); // data structure for map
 
-    let mut hexmap = HexMap::new(100,75); // data structure for map
+let gen = Islands::default();
+gen.generate(&mut hexmap);
 
-    let gen = Islands::default();
-    gen.generate(&mut hexmap);
-
-    let renderer = OGL::default();
-    let img = renderer.render(&hexmap); // renders to image
+let renderer = OGL::default();
+let img = renderer.render(&hexmap); // renders to image
+```
 
 
 ## Generators:
