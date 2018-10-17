@@ -1,6 +1,6 @@
 use glium::*;
 use rand::prelude::*;
-use image::{RgbImage, ImageBuffer, Rgb};
+use image::{RgbImage, ImageBuffer, DynamicImage};
 
 use hexmap::HexMap;
 use hex::{Hex, HexType, RATIO};
@@ -63,10 +63,13 @@ impl OGL {
 
 impl Renderer for OGL {
     fn render(&self, map: &HexMap) -> RgbImage {
-        let mut events_loop = glutin::EventsLoop::new();
-        let size = glutin::dpi::LogicalSize::new(1280.0, 720.0);
-        let window = glutin::WindowBuilder::new().with_dimensions(size);
-        let context = glutin::ContextBuilder::new().with_vsync(true).with_multisampling(2);
+        let w = (map.absolute_size_x * self.multiplier) as f64;
+        let h = (map.absolute_size_y * self.multiplier) as f64;
+
+        let events_loop = glutin::EventsLoop::new();
+        let size = glutin::dpi::LogicalSize::new(w, h);
+        let window = glutin::WindowBuilder::new().with_visibility(false).with_dimensions(size).with_decorations(false);
+        let context = glutin::ContextBuilder::new().with_multisampling(8);
         let display = Display::new(window, context, &events_loop).unwrap();
 
         let mut rng = thread_rng();
@@ -119,28 +122,25 @@ impl Renderer for OGL {
 
         let program = Program::from_source(&display, vertex_shader_src, fragment_shader_src, None).unwrap();
 
-        let mut closed = false;
-        let mut paused = false;
-        while !closed {
-            if !paused {
-                let mut target = display.draw();
-                target.clear_color(0.0, 0.0, 0.0, 1.0);
-                target.draw((&vertex_buffer, per_instance.per_instance().unwrap()), &indices, &program, &uniform! {total_x: map.absolute_size_x, total_y: map.absolute_size_y }, &Default::default()).unwrap();
-                target.finish().unwrap();
-            }
+        let mut imgbuf;
+        // rendering
+        let mut target = display.draw();
+        target.clear_color(0.0, 0.0, 0.0, 1.0);
+        target.draw((&vertex_buffer, per_instance.per_instance().unwrap()), &indices, &program, &uniform! {total_x: map.absolute_size_x, total_y: map.absolute_size_y }, &Default::default()).unwrap();
+        target.finish().unwrap();
 
-            events_loop.poll_events(|event| {
-                match event {
-                    glutin::Event::WindowEvent { event, .. } => match event {
-                        glutin::WindowEvent::CloseRequested => closed = true,
-                        glutin::WindowEvent::Focused(focused) => paused = !focused,
-                        _ => ()
-                    },
-                    _ => (),
-                }
-            });
+        // reading the front buffer into an image
+        let image: texture::RawImage2d<u8> = display.read_front_buffer();
+        let image_data = image.data.into_owned();
+        let mut new_data: Vec<u8> = Vec::new();
+        // remove alpha channel
+        for chunk in image_data.chunks(4) {
+            new_data.push(chunk[0]);
+            new_data.push(chunk[1]);
+            new_data.push(chunk[2]);
         }
-        let mut imgbuf = RgbImage::new(128, 128);
+        imgbuf = ImageBuffer::from_raw(image.width, image.height, new_data).unwrap();
+        imgbuf = DynamicImage::ImageRgb8(imgbuf).flipv().to_rgb();
         imgbuf
     }
 }

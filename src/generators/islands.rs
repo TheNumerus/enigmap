@@ -241,7 +241,12 @@ impl Islands {
     }
 
     fn seed_to_rng_seed(seed: u32) -> [u8; 32] {
+        let mut seed_copy = seed;
         let mut array: [u8; 32] = [0; 32];
+        for i in 0..32 {
+            array[i] = seed_copy as u8;
+            seed_copy = seed_copy.rotate_left(8);
+        }
         array
     }
 }

@@ -1,32 +1,35 @@
 extern crate enigmap;
-extern crate serde_json;
 
-use enigmap::renderers::{Renderer, Basic, OGL};
-use enigmap::HexMap;
-use enigmap::generators::{MapGen, Islands};
+use enigmap::{
+    renderers::{Renderer, OGL},
+    HexMap,
+    generators::{MapGen, Islands}
+};
 
-use std::fs;
-use std::io;
-use std::path::Path;
-use std::time::Instant;
+use std::{
+    fs,
+    io,
+    path::Path,
+    time::Instant
+};
 
 fn main() -> Result<(), std::io::Error> {
     // initialize map
     let mut hexmap = HexMap::new(100,75);
 
+    // generate map field
+    let mut gen = Islands::default();
+    
     println!("Please input seed: ");
     let mut seed = String::new();
 
     io::stdin().read_line(&mut seed)
         .expect("Failed to read line");
 
-    let seed: u32 = seed.trim().parse()
-        .expect("Please type a number!");
-
-
-    // generate map field
-    let mut gen = Islands::default();
-    gen.set_seed(seed);
+     match seed.trim().parse() {
+        Ok(some) => gen.set_seed(some),
+        Err(_) => println!("Not a number, using random seed"),
+     }
 
     // bench generator
     let time = Instant::now();
