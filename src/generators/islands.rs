@@ -267,7 +267,7 @@ impl MapGen for Islands {
             false => random::<u32>(),
             true => self.seed,
         };
-        println!("seed: {:?}", seed);
+        // println!("seed: {:?}", seed);
         w.set_seed(seed);
         p.set_seed(seed);
         w.enable_range(true);
