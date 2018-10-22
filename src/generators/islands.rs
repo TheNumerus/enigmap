@@ -1,7 +1,7 @@
 use rand::prelude::*;
 use rand::rngs::StdRng;
 use noise::{Fbm, NoiseFn, Seedable, Worley, Perlin};
-use std::{f32, env};
+use std::f32;
 
 use hexmap::HexMap;
 use hex::{Hex, HexType};
@@ -260,10 +260,7 @@ impl Default for Islands {
 impl MapGen for Islands {
     fn generate(&self, hex_map: &mut HexMap) {
         // check for debug info
-        let debug = match env::var_os("ENIGMAP_DEBUG") {
-            Some(_) => true,
-            None => false
-        };
+        let debug: bool = <Islands as MapGen>::check_debug();
 
         // init generators
         let w = Worley::new();
