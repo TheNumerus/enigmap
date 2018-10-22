@@ -10,7 +10,7 @@ use enigmap::{
     generators::{MapGen, Islands}
 };
 
-fn gen(x: i32, y: i32) {
+fn gen(x: u32, y: u32) {
     let mut hexmap = HexMap::new(x, y);
     let gen = Islands::default();
     gen.generate(&mut hexmap);

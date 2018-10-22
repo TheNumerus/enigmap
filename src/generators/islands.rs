@@ -1,7 +1,7 @@
 use rand::prelude::*;
 use rand::rngs::StdRng;
 use noise::{Fbm, NoiseFn, Seedable, Worley, Perlin};
-use std::f32;
+use std::{f32, env};
 
 use hexmap::HexMap;
 use hex::{Hex, HexType};
@@ -24,7 +24,7 @@ impl Islands {
             let dst_to_edge = 1.0 - ((hex.center_y / hex_map.absolute_size_y - 0.5).abs() * 2.0);
             
             // make sure ice is certain to appear
-            if hex.y == 0 || hex.y == (hex_map.size_y - 1) {
+            if hex.y == 0 || hex.y == (hex_map.size_y as i32 - 1) {
                 hex.terrain_type = HexType::ICE;
             }
             // ice noise on top and bottom
@@ -228,7 +228,7 @@ impl Islands {
         for hex in &mut hex_map.field {
             let mut diff_neighbours = 0;
             // check for neighbours
-            for (neighbour_x, neighbour_y) in Hex::get_neighbours(&hex, hex_map.size_x, hex_map.size_y) {
+            for (neighbour_x, neighbour_y) in Hex::get_neighbours(&hex, hex_map.size_x as i32, hex_map.size_y as i32) {
                 let index = HexMap::coords_to_index(neighbour_x, neighbour_y, old_map.size_x, old_map.size_y);
                 if hex.terrain_type != old_map.field[index].terrain_type {
                     diff_neighbours += 1;
@@ -259,6 +259,12 @@ impl Default for Islands {
 
 impl MapGen for Islands {
     fn generate(&self, hex_map: &mut HexMap) {
+        // check for debug info
+        let debug = match env::var_os("ENIGMAP_DEBUG") {
+            Some(_) => true,
+            None => false
+        };
+
         // init generators
         let w = Worley::new();
         let f = Fbm::new();
@@ -267,7 +273,8 @@ impl MapGen for Islands {
             false => random::<u32>(),
             true => self.seed,
         };
-        // println!("seed: {:?}", seed);
+
+        if debug { println!("seed: {:?}", seed) };
         w.set_seed(seed);
         p.set_seed(seed);
         w.enable_range(true);
@@ -277,9 +284,13 @@ impl MapGen for Islands {
         let land_noise_scale = 8.0 / hex_map.absolute_size_x as f64;
         
         self.ice_pass(hex_map, &w, noise_scale, seed);
+        if debug { println!("Ice generated") };
         self.land_pass(hex_map, &f, land_noise_scale, seed);
+        if debug { println!("Land generated") };
         self.decorator_pass(hex_map, &p, noise_scale, seed);
+        if debug { println!("Land features generated") };
         self.ocean_pass(hex_map, &f, land_noise_scale, seed);
+        if debug { println!("Oceans generated") };
     }
 
     fn set_seed(&mut self, seed: u32) {
