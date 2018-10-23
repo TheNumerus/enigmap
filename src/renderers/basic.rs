@@ -1,41 +1,19 @@
 use image::{RgbImage, ImageBuffer, Rgb};
 use hexmap::HexMap;
-use hex::{Hex, HexType, RATIO};
+use hex::{Hex, HexType};
 use renderers::Renderer;
 use rand::prelude::*;
 
+
+/// Software renderer
+/// 
+/// Provides wrong results and shouldn't be used
 pub struct Basic {
+    /// Size of `Hex` on X axis in pixels
     pub multiplier: f32,
 }
 
 impl Basic {
-    //     5
-    //  4     0
-    //  3     1
-    //     2
-    fn get_hex_vertex(&self, hex: &Hex, index: usize) -> Result<(u32, u32), &'static str> {
-        if index > 5 {
-            return Err("index out of range")
-        }
-        // get hex relative coords
-        let sides_x = 0.5;
-        let sides_y = RATIO / 4.0;
-        let bottom_y = RATIO / 2.0;
-        let mut coords = match index {
-            0 => (sides_x, -sides_y),
-            1 => (sides_x, sides_y),
-            2 => (0.0, bottom_y),
-            3 => (-sides_x, sides_y),
-            4 => (-sides_x, -sides_y),
-            _ => (0.0, -bottom_y),
-        };
-        // add absolute coords
-        coords.0 += hex.center_x;
-        coords.1 += hex.center_y;
-        // miltiply by multiplier
-        Ok(((coords.0 * self.multiplier) as u32, (coords.1 * self.multiplier) as u32))
-    }
-
     fn get_triangle_pixels(&self, upper: (u32, u32), lower: (u32, u32), pointy: (u32, u32)) -> Vec<(u32, u32)> {
         let mut pixels = vec!{upper};
         let half_height = pointy.1 - upper.1;
@@ -71,7 +49,8 @@ impl Basic {
         // get hex vertices positions
         let mut points: Vec<(u32, u32)> = Vec::with_capacity(6);
         for i in 0..6 {
-            points.push(self.get_hex_vertex(hex, i).unwrap());
+            let coords = Basic::get_hex_vertex(hex, i);
+            points.push(((coords.0 * self.multiplier) as u32, (coords.1 * self.multiplier) as u32));
         }
         // get hex pixels
         let mut pixels = vec!{center_point};

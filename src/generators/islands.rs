@@ -7,6 +7,7 @@ use hexmap::HexMap;
 use hex::{Hex, HexType};
 use generators::MapGen;
 
+/// Generator that generates multiple islands
 pub struct Islands {
     seed: u32,
     using_seed: bool,
@@ -40,6 +41,8 @@ impl Islands {
         }
     }
 
+
+    /// Generates land
     fn land_pass<T>(&self, hex_map: &mut HexMap, gen: &T, noise_scale: f64, seed: u32)
         where T:NoiseFn<[f64; 2]>
     {
@@ -102,6 +105,7 @@ impl Islands {
         }
     }
 
+    /// Changes tiles with `HexType::FIELD` to something different based on position
     fn decorator_pass<T>(&self, hex_map: &mut HexMap, gen: &T, noise_scale: f64, seed: u32)
         where T:NoiseFn<[f64; 2]>
     {
@@ -186,6 +190,12 @@ impl Islands {
         }
     }
 
+    /// Generates oceans by changing `HexType::WATER` tiles into `HexType::OCEAN`
+    /// 
+    /// Uses same generator as land pass for better ocean generation
+    /// 
+    /// # TODO
+    /// Fix slow performance. Right now it's the slowest pass
     fn ocean_pass<T>(&self, hex_map: &mut HexMap, gen: &T, noise_scale: f64, seed: u32)
         where T:NoiseFn<[f64; 2]>
     {
@@ -223,6 +233,7 @@ impl Islands {
         self.clear_pass(hex_map, HexType::OCEAN, HexType::WATER, 3);
     }
 
+    /// Changes type of hexes with neighbours with different type than itself
     fn clear_pass(&self, hex_map: &mut HexMap, from: HexType, to: HexType, strength: u32) {
         let old_map = hex_map.clone();
         for hex in &mut hex_map.field {
@@ -238,16 +249,6 @@ impl Islands {
                 hex.terrain_type = to;
             }
         }
-    }
-
-    fn seed_to_rng_seed(seed: u32) -> [u8; 32] {
-        let mut seed_copy = seed;
-        let mut array: [u8; 32] = [0; 32];
-        for i in 0..32 {
-            array[i] = seed_copy as u8;
-            seed_copy = seed_copy.rotate_left(8);
-        }
-        array
     }
 }
 

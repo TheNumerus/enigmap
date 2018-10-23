@@ -11,10 +11,12 @@ pub struct Hex {
 pub const RATIO: f32 = 1.1547;
 
 impl Hex {
+    /// Creates new empty 'Hex' with default values
     fn new() -> Hex {
         Hex{x:0, y: 0, terrain_type: HexType::WATER, center_x: 0.5, center_y: RATIO / 2.0 + 0.1}
     }
 
+    /// Creates new `Hex` from specific coordinates with default `terrain_type`
     pub fn from_coords(x: i32, y: i32) -> Hex {
         let center_x = (x as f32) + (y/2) as f32 + match y % 2 {
             0 => 0.6,
@@ -24,12 +26,12 @@ impl Hex {
         Hex{x, y, terrain_type: HexType::WATER, center_x, center_y}    
     }
 
-    /// Returns dstance to other hex
+    /// Returns dstance to other `Hex`
     pub fn distance_to(&self, other: &Hex) -> i32 {
         ((self.x - other.x).abs() + (self.x + self.y - other.x - other.y).abs() + (self.y - other.y).abs()) / 2
     }
 
-    /// Returns vector of hexes next to specified hex
+    /// Returns vector of `Hex` tiles next to specified `Hex`
     pub fn get_neighbours(hex: &Hex, size_x: i32, size_y: i32) -> Vec<(i32, i32)> {
         let mut neighbours: Vec<(i32, i32)> = Vec::with_capacity(6);
 
@@ -51,7 +53,7 @@ impl Hex {
         neighbours
     }
 
-    
+    /// Fixes coordinates which are out of bounds 
     pub fn unwrap_coords(x: i32, y: i32, size_x: i32) -> (i32, i32) {
         let mut new_x = x;
         if x < -(y/2) {
@@ -70,6 +72,7 @@ impl Hex {
 }
 
 #[derive(Deserialize, Debug, Clone, PartialEq, Copy)]
+/// Type of terrain / feature on specific 'Hex'
 pub enum HexType {
     FIELD,
     FOREST,

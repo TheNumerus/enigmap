@@ -6,7 +6,7 @@ use hex::HexType;
 use generators::MapGen;
 
 
-// Most basic map generator
+/// Most basic map generator
 pub struct Circle {
     pub ring_size: f32,
     pub ice_falloff: f32,
