@@ -193,13 +193,16 @@ impl Islands {
     /// Generates oceans by changing `HexType::WATER` tiles into `HexType::OCEAN`
     /// 
     /// Uses same generator as land pass for better ocean generation
-    /// 
-    /// # TODO
-    /// Fix slow performance. Right now it's the slowest pass
     fn ocean_pass<T>(&self, hex_map: &mut HexMap, gen: &T, noise_scale: f64, seed: u32)
         where T:NoiseFn<[f64; 2]>
     {
-        let old_field = hex_map.field.clone();
+        let mut old_field: Vec<Hex> = Vec::new();
+        for hex in &mut hex_map.field {
+            match hex.terrain_type {
+                HexType::WATER | HexType::ICE | HexType::OCEAN => continue,
+                _ => old_field.push(hex.clone())
+            };
+        }
         for hex in &mut hex_map.field {
             // skip everything thats not water
             match hex.terrain_type {
@@ -210,15 +213,10 @@ impl Islands {
             let noise_val = gen.get([hex.center_x as f64 * noise_scale + seed as f64, hex.center_y as f64 * noise_scale]);
             // get distance to land
             for other in &old_field {
-                match other.terrain_type {
-                    HexType::WATER | HexType::ICE | HexType::OCEAN => {},
-                    _ => {
-                        let dst = hex.distance_to(&other);
-                        if dst < dst_to_land {
-                            dst_to_land = dst;
-                        }
-                    }
-                };
+                let dst = hex.distance_to(&other);
+                if dst < dst_to_land {
+                    dst_to_land = dst;
+                }
             }
             // spawn oceans
             if dst_to_land > 5 || noise_val < 0.14 {
