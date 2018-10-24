@@ -34,6 +34,7 @@ fn main() {
     // render image
     let mut renderer = OGL::default();
     renderer.set_scale(10.0);
+    renderer.set_wrap_map(true);
     
     let mut img: RgbImage = ImageBuffer::new(1,1);
 

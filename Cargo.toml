@@ -3,10 +3,11 @@ name = "enigmap"
 version = "0.1.0"
 authors = ["Petr Volf <Petr.volf216@gmail.com>"]
 
+[features]
+default = []
+
 [dependencies]
-serde = "1.0.79"
-serde_derive = "1.0"
-serde_json = "1.0.31"
+serde = {version = "1.0.79", optional = true, features = ["derive"]}
 image = "0.20.0"
 rand = "0.5.5"
 noise = "0.5.1"

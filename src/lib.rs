@@ -17,10 +17,10 @@
 //!let img = renderer.render(&hexmap); // renders to image
 //!```
 
+#[cfg(feature = "serde")]
 #[macro_use]
-extern crate serde_derive;
 extern crate serde;
-extern crate serde_json;
+
 extern crate image;
 extern crate rand;
 extern crate noise;

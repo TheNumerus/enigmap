@@ -1,6 +1,6 @@
 use hex::{RATIO, Hex};
-
-#[derive(Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Debug, Clone)]
 /// Base data structure for generated map
 pub struct HexMap {
     /// Number of `Hex` tiles in X direction

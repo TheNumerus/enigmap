@@ -1,4 +1,5 @@
-#[derive(Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Debug, Clone)]
 /// Data structure for single map tile
 pub struct Hex {
     pub x: i32,
@@ -72,7 +73,8 @@ impl Hex {
     }
 }
 
-#[derive(Deserialize, Debug, Clone, PartialEq, Copy)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Debug, Clone, PartialEq, Copy)]
 /// Type of terrain / feature on specific 'Hex'
 pub enum HexType {
     FIELD,

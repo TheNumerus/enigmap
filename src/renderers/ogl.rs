@@ -12,6 +12,8 @@ use renderers::Renderer;
 pub struct OGL {
     /// Size of `Hex` on X axis in pixels
     multiplier: f32,
+    /// Should the map repeat on the X axis
+    wrap_map: bool,
 }
 
 impl OGL {
@@ -26,6 +28,10 @@ impl OGL {
         verts.push(Vertex::from_tupple(OGL::get_hex_vertex(hex, 1)));
         verts.push(Vertex::from_tupple(OGL::get_hex_vertex(hex, 2)));
         verts
+    }
+    /// Should the map repeat on the X axis
+    pub fn set_wrap_map(&mut self, value: bool) {
+        self.wrap_map = value;
     }
 }
 
@@ -45,9 +51,9 @@ impl Renderer for OGL {
         let mut rng = thread_rng();
 
         let shape: Vec<Vertex> = OGL::get_hex_points(&map.field[0]);
+        implement_vertex!(Vertex, position);
         let vertex_buffer = VertexBuffer::new(&display, &shape).unwrap();
 
-        implement_vertex!(Vertex, position);
         let indices = index::NoIndices(index::PrimitiveType::TriangleStrip);
 
 
@@ -78,11 +84,23 @@ impl Renderer for OGL {
                 color.0 *= color_diff;
                 color.1 *= color_diff;
                 color.2 *= color_diff;
-                Attr {
+                let mut vec: Vec<Attr> = Vec::new();
+                vec.push(Attr {
                     world_position: (hex.center_x - 0.5, hex.center_y - RATIO / 2.0),
                     color
+                });
+                if self.wrap_map {
+                    vec.push(Attr {
+                        world_position: (hex.center_x - 0.5 - map.size_x as f32, hex.center_y - RATIO / 2.0),
+                        color
+                    });
+                    vec.push(Attr {
+                        world_position: (hex.center_x - 0.5 + map.size_x as f32, hex.center_y - RATIO / 2.0),
+                        color
+                    });
                 }
-            }).collect::<Vec<_>>();
+                vec
+            }).flatten().collect::<Vec<_>>();
 
             vertex::VertexBuffer::dynamic(&display, &data).unwrap()
         };
@@ -96,6 +114,9 @@ impl Renderer for OGL {
         // rendering
         let mut target = display.draw();
         target.clear_color(0.0, 0.0, 0.0, 1.0);
+        if self.wrap_map {
+            target.clear_color(0.79, 0.82, 0.8, 1.0);
+        }
         target.draw((&vertex_buffer, per_instance.per_instance().unwrap()),
             &indices, &program, &uniform! {total_x: map.absolute_size_x, total_y: map.absolute_size_y }, &Default::default()).unwrap();
         target.finish().unwrap();
@@ -126,7 +147,7 @@ impl Renderer for OGL {
 
 impl Default for OGL {
     fn default() -> OGL {
-        OGL{multiplier: 50.0}
+        OGL{multiplier: 50.0, wrap_map: false}
     }
 }
 
