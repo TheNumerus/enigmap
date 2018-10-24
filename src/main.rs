@@ -1,10 +1,13 @@
 extern crate enigmap;
+extern crate image;
 
 use enigmap::{
-    renderers::{Renderer, OGL},
-    HexMap,
-    generators::{MapGen, Islands}
+    prelude::*,
+    renderers::OGL,
+    generators::Islands
 };
+
+use image::{RgbImage, ImageBuffer};
 
 use std::{
     fs,
@@ -13,7 +16,7 @@ use std::{
     time::Instant
 };
 
-fn main() -> Result<(), std::io::Error> {
+fn main() {
     let sizes = get_size();
 
     // initialize map
@@ -24,32 +27,32 @@ fn main() -> Result<(), std::io::Error> {
 
     set_seed(&mut gen);
 
-    // bench generator
-    let time = Instant::now();
-    gen.generate(&mut hexmap);
-
-    println!("Generation took {}.{:03} seconds", time.elapsed().as_secs(), time.elapsed().subsec_millis());
+    bencher(| | {
+        gen.generate(&mut hexmap);
+    }, "Generation");
 
     // render image
     let mut renderer = OGL::default();
     renderer.set_scale(10.0);
+    
+    let mut img: RgbImage = ImageBuffer::new(1,1);
 
-    // bench renderer
-    let time = Instant::now();
-    let img = renderer.render(&hexmap);
-
-    println!("Rendering took {}.{:03} seconds", time.elapsed().as_secs(), time.elapsed().subsec_millis());
+    bencher(| | {
+        img = renderer.render(&hexmap);
+    }, "Rendering");
 
     // create folder for image if needed
     let path = "./out";
     if !Path::new(path).exists() {
-        fs::create_dir("./out")?;
+        fs::create_dir("./out").unwrap();
     }
 
     // save image
-    img.save("./out/image.png")?;
-    Ok(())
+    bencher(| | {
+        img.save("./out/image.png").unwrap();
+    }, "Saving");
 }
+
 
 fn set_seed<T>(gen: &mut T)
     where T: MapGen
@@ -65,32 +68,29 @@ fn set_seed<T>(gen: &mut T)
     }
 }
 
-fn get_size() -> (u32, u32) {
-    println!("Please input size X: ");
+fn get_u32(name: &str, default: u32) -> u32 {
+    println!("Please input {}: ", name);
     let mut size_x = String::new();
 
     io::stdin().read_line(&mut size_x).expect("Failed to read line");
 
-    let size_x: u32 = match size_x.trim().parse() {
+    match size_x.trim().parse() {
         Ok(some) => some,
         Err(_) => {
-            println!("Not a number, set default value of 100");
-            100
+            println!("Not a number, set default value of {}", default);
+            default
         },
-    };
+    }
+}
 
-    println!("Please input size Y: ");
-    let mut size_y = String::new();
+fn get_size() -> (u32, u32) {
+    (get_u32("size X", 100), get_u32("size Y", 75))
+}
 
-    io::stdin().read_line(&mut size_y).expect("Failed to read line");
-
-    let size_y: u32 = match size_y.trim().parse() {
-        Ok(some) => some,
-        Err(_) => {
-            println!("Not a number, set default value of 75");
-            75
-        },
-    };
-
-    (size_x, size_y)
+fn bencher<T>(mut test: T, name: &str)
+    where T: FnMut()
+{
+    let time = Instant::now();
+    test();
+    println!("{} took {}.{:03} seconds", name, time.elapsed().as_secs(), time.elapsed().subsec_millis());
 }

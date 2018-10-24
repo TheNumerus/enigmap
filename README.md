@@ -1,8 +1,11 @@
 # enigmap
 Hexagonal map generator and renderer written in Rust.
 ```rust
-use enigmap::generators::{MapGen, Islands};
-use enigmap::renderers::{Renderer, OGL};
+use enigmap::{
+    prelude::*,
+    generators::Islands,
+    renderers::OGL
+};
 
 let mut hexmap = HexMap::new(100,75); // data structure for map
 

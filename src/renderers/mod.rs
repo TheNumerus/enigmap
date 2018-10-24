@@ -15,6 +15,9 @@ pub trait Renderer {
     /// Returns `image::RgbImage`
     fn render(&self, map: &HexMap) -> RgbImage;
 
+    /// Set scale of rendered hexagons
+    fn set_scale(&mut self, scale: f32);
+
 
     /// Returns `Hex` vertex positon in relative (non-multiplied) coordinates
     /// 

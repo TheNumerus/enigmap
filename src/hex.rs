@@ -1,4 +1,5 @@
 #[derive(Deserialize, Debug, Clone)]
+/// Data structure for single map tile
 pub struct Hex {
     pub x: i32,
     pub y: i32,
@@ -7,7 +8,7 @@ pub struct Hex {
     pub center_y: f32
 }
 
-// this is roughly ratio of hexagon height to width
+/// This is roughly ratio of hexagon height to width
 pub const RATIO: f32 = 1.1547;
 
 impl Hex {

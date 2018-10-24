@@ -10,7 +10,7 @@ use rand::prelude::*;
 /// Provides wrong results and shouldn't be used
 pub struct Basic {
     /// Size of `Hex` on X axis in pixels
-    pub multiplier: f32,
+    multiplier: f32,
 }
 
 impl Basic {
@@ -81,17 +81,6 @@ impl Basic {
             img.put_pixel(pixel.0, pixel.1, color);
         }
     }
-
-    // public functions
-
-    /// Set scale of rendered hexagons
-    pub fn set_scale(&mut self, scale: f32) {
-        if scale > 0.0 {
-            self.multiplier = scale;
-        } else {
-            panic!("Invalid scale, only positive values accepted")
-        }
-    }
 }
 
 impl Default for Basic {
@@ -110,5 +99,13 @@ impl Renderer for Basic {
             self.render_hex(&mut imgbuf, hex);
         }
         imgbuf
+    }
+
+    fn set_scale(&mut self, scale: f32) {
+        if scale > 0.0 {
+            self.multiplier = scale;
+        } else {
+            panic!("Invalid scale, only positive values accepted")
+        }
     }
 }

@@ -9,7 +9,7 @@ pub struct HexMap {
     pub size_y: u32,
     /// `Hex` tiles storage
     /// 
-    /// stored from left to right and from top to bottom
+    /// Stored from left to right and from top to bottom
     pub field: Vec<Hex>,
     /// Absolute size of `HexMap` in X axis
     /// 

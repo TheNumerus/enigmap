@@ -27,15 +27,6 @@ impl OGL {
         verts.push(Vertex::from_tupple(OGL::get_hex_vertex(hex, 2)));
         verts
     }
-
-    /// Set scale of rendered hexagons
-    pub fn set_scale(&mut self, scale: f32) {
-        if scale > 0.0 {
-            self.multiplier = scale;
-        } else {
-            panic!("Invalid scale, only positive values accepted")
-        }
-    }
 }
 
 impl Renderer for OGL {
@@ -122,6 +113,14 @@ impl Renderer for OGL {
         let mut imgbuf = ImageBuffer::from_raw(image.width, image.height, new_data).unwrap();
         imgbuf = DynamicImage::ImageRgb8(imgbuf).flipv().to_rgb();
         imgbuf
+    }
+
+    fn set_scale(&mut self, scale: f32) {
+        if scale > 0.0 {
+            self.multiplier = scale;
+        } else {
+            panic!("Invalid scale, only positive values accepted")
+        }
     }
 }
 
