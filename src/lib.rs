@@ -30,6 +30,9 @@ extern crate glium;
 mod hexmap;
 mod hex;
 
+#[macro_use]
+mod utils;
+
 /// Reimports for basic usage
 pub mod prelude {
     pub use hexmap::HexMap;

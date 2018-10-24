@@ -260,9 +260,6 @@ impl Default for Islands {
 
 impl MapGen for Islands {
     fn generate(&self, hex_map: &mut HexMap) {
-        // check for debug info
-        let debug: bool = <Islands as MapGen>::check_debug();
-
         // init generators
         let w = Worley::new();
         let f = Fbm::new();
@@ -272,7 +269,7 @@ impl MapGen for Islands {
             true => self.seed,
         };
 
-        if debug { println!("seed: {:?}", seed) };
+        debug_println!("seed: {:?}", seed);
         w.set_seed(seed);
         p.set_seed(seed);
         w.enable_range(true);
@@ -282,13 +279,13 @@ impl MapGen for Islands {
         let land_noise_scale = 8.0 / hex_map.absolute_size_x as f64;
         
         self.ice_pass(hex_map, &w, noise_scale, seed);
-        if debug { println!("Ice generated") };
+        debug_println!("Ice generated");
         self.land_pass(hex_map, &f, land_noise_scale, seed);
-        if debug { println!("Land generated") };
+        debug_println!("Land generated");
         self.decorator_pass(hex_map, &p, noise_scale, seed);
-        if debug { println!("Land features generated") };
+        debug_println!("Land features generated");
         self.ocean_pass(hex_map, &f, land_noise_scale, seed);
-        if debug { println!("Oceans generated") };
+        debug_println!("Oceans generated");
     }
 
     fn set_seed(&mut self, seed: u32) {
