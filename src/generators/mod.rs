@@ -2,9 +2,11 @@ use hexmap::HexMap;
 
 mod circle;
 mod islands;
+mod geo;
 
 pub use self::circle::Circle;
 pub use self::islands::Islands;
+pub use self::geo::Geo;
 
 /// Trait for map generators
 /// 

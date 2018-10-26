@@ -79,11 +79,18 @@ impl Renderer for OGL {
                     HexType::TUNDRA => (0.3, 0.4, 0.38),
                     HexType::DESERT => (0.85, 0.83, 0.70),
                     HexType::JUNGLE => (0.34, 0.65, 0.1),
-                    _ => (0.0, 0.0, 0.0)
+                    HexType::IMPASSABLE => (0.15, 0.15, 0.15),
+                    HexType::DEBUG(val) => (val, val, val),
+                    HexType::DEBUG_2D((val_x , val_y)) => (val_x, val_y , 0.0),
                 };
-                color.0 *= color_diff;
-                color.1 *= color_diff;
-                color.2 *= color_diff;
+                match hex.terrain_type {
+                    HexType::DEBUG(_) | HexType::DEBUG_2D(_) => {},
+                    _ => {
+                        color.0 *= color_diff;
+                        color.1 *= color_diff;
+                        color.2 *= color_diff;
+                    }
+                };
                 let mut vec: Vec<Attr> = Vec::new();
                 vec.push(Attr {
                     world_position: (hex.center_x - 0.5, hex.center_y - RATIO / 2.0),

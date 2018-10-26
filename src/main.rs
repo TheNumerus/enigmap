@@ -4,7 +4,7 @@ extern crate image;
 use enigmap::{
     prelude::*,
     renderers::OGL,
-    generators::Islands
+    generators::Geo
 };
 
 use image::{RgbImage, ImageBuffer};
@@ -23,7 +23,7 @@ fn main() {
     let mut hexmap = HexMap::new(sizes.0, sizes.1);
 
     // generate map field
-    let mut gen = Islands::default();
+    let mut gen = Geo::default();
 
     set_seed(&mut gen);
 

@@ -1,3 +1,8 @@
+use rand::{
+    distributions::{Distribution, Standard},
+    Rng
+};
+
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone)]
 /// Data structure for single map tile
@@ -86,5 +91,24 @@ pub enum HexType {
     MOUNTAIN,
     IMPASSABLE,
     ICE,
-    JUNGLE
+    JUNGLE,
+    DEBUG(f32),
+    DEBUG_2D((f32,f32)),
+}
+
+impl Distribution<HexType> for Standard {
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> HexType {
+        match rng.gen_range(0, 9) {
+            0 => HexType::FIELD,
+            1 => HexType::FOREST,
+            2 => HexType::DESERT,
+            3 => HexType::TUNDRA,
+            4 => HexType::WATER,
+            5 => HexType::OCEAN,
+            6 => HexType::MOUNTAIN,
+            7 => HexType::IMPASSABLE,
+            8 => HexType::ICE,
+            _ => HexType::JUNGLE
+        }
+    }
 }
