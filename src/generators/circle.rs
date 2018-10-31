@@ -1,9 +1,9 @@
 use rand::prelude::*;
 use noise::{Perlin, NoiseFn, Seedable};
 
-use hexmap::HexMap;
-use hex::HexType;
-use generators::MapGen;
+use crate::hexmap::HexMap;
+use crate::hex::HexType;
+use crate::generators::MapGen;
 
 
 /// Most basic map generator

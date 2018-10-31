@@ -2,9 +2,9 @@ use glium::*;
 use rand::prelude::*;
 use image::{RgbImage, ImageBuffer, DynamicImage};
 
-use hexmap::HexMap;
-use hex::{Hex, HexType, RATIO};
-use renderers::Renderer;
+use crate::hexmap::HexMap;
+use crate::hex::{Hex, HexType, RATIO};
+use crate::renderers::Renderer;
 
 /// Basic hardware renderer
 /// 
@@ -129,7 +129,7 @@ impl Renderer for OGL {
         target.finish().unwrap();
 
         // reading the front buffer into an image
-        let image: texture::RawImage2d<u8> = display.read_front_buffer();
+        let image: texture::RawImage2d<'_, u8> = display.read_front_buffer();
         let image_data = image.data.into_owned();
         let mut new_data: Vec<u8> = Vec::new();
         // remove alpha channel

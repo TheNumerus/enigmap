@@ -2,6 +2,7 @@
 name = "enigmap"
 version = "0.1.0"
 authors = ["Petr Volf <Petr.volf216@gmail.com>"]
+edition = "2018"
 
 [features]
 default = []

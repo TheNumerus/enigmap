@@ -1,4 +1,4 @@
-use hexmap::HexMap;
+use crate::hexmap::HexMap;
 
 mod circle;
 mod islands;

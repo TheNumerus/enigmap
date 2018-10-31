@@ -28,7 +28,7 @@ pub fn check_debug() -> bool {
 macro_rules! debug_println {
     ( $( $x:expr ),* ) => {
         {
-            use utils::check_debug;
+            use crate::utils::check_debug;
             if check_debug() {
                 println!(
                     $(

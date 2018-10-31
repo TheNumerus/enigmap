@@ -3,9 +3,9 @@ use rand::rngs::StdRng;
 use noise::{Fbm, NoiseFn, Seedable};
 use std::f32;
 
-use generators::MapGen;
-use hexmap::HexMap;
-use hex::{Hex, HexType};
+use crate::generators::MapGen;
+use crate::hexmap::HexMap;
+use crate::hex::{Hex, HexType};
 
 /// Geological generator
 pub struct Geo {

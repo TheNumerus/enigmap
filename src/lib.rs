@@ -21,12 +21,6 @@
 #[macro_use]
 extern crate serde;
 
-extern crate image;
-extern crate rand;
-extern crate noise;
-#[macro_use]
-extern crate glium;
-
 mod hexmap;
 mod hex;
 
@@ -35,13 +29,13 @@ mod utils;
 
 /// Reimports for basic usage
 pub mod prelude {
-    pub use hexmap::HexMap;
-    pub use renderers::Renderer;
-    pub use generators::MapGen;
+    pub use crate::hexmap::HexMap;
+    pub use crate::renderers::Renderer;
+    pub use crate::generators::MapGen;
 }
 
-pub use hex::{Hex, HexType};
-pub use hexmap::HexMap;
+pub use crate::hex::{Hex, HexType};
+pub use crate::hexmap::HexMap;
 /// Renderers
 pub mod renderers;
 /// Map generators

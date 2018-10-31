@@ -1,4 +1,4 @@
-use hex::{RATIO, Hex};
+use crate::hex::{RATIO, Hex};
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone)]
 /// Base data structure for generated map

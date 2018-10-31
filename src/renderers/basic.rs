@@ -1,7 +1,7 @@
 use image::{RgbImage, ImageBuffer, Rgb};
-use hexmap::HexMap;
-use hex::{Hex, HexType};
-use renderers::Renderer;
+use crate::hexmap::HexMap;
+use crate::hex::{Hex, HexType};
+use crate::renderers::Renderer;
 use rand::prelude::*;
 
 

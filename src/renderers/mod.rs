@@ -1,5 +1,5 @@
-use hexmap::HexMap;
-use hex::{Hex, RATIO};
+use crate::hexmap::HexMap;
+use crate::hex::{Hex, RATIO};
 use image::RgbImage;
 
 mod basic;

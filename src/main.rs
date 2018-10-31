@@ -1,6 +1,3 @@
-extern crate enigmap;
-extern crate image;
-
 use enigmap::{
     prelude::*,
     renderers::OGL,

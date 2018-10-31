@@ -3,9 +3,9 @@ use rand::rngs::StdRng;
 use noise::{Fbm, NoiseFn, Seedable, Worley, Perlin};
 use std::f32;
 
-use hexmap::HexMap;
-use hex::{Hex, HexType};
-use generators::MapGen;
+use crate::hexmap::HexMap;
+use crate::hex::{Hex, HexType};
+use crate::generators::MapGen;
 
 /// Generator that generates multiple islands
 pub struct Islands {
