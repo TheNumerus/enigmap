@@ -39,11 +39,11 @@ impl Hex {
     }
 
     /// Returns vector of `Hex` tiles next to specified `Hex`
-    pub fn get_neighbours(hex: &Hex, size_x: i32, size_y: i32) -> Vec<(i32, i32)> {
+    pub fn get_neighbours(hex: &Hex, size_x: u32, size_y: u32) -> Vec<(i32, i32)> {
         let mut neighbours: Vec<(i32, i32)> = Vec::with_capacity(6);
 
         // bottom
-        if hex.y != (size_y - 1) {
+        if hex.y != (size_y as i32 - 1) {
             neighbours.push(Hex::unwrap_coords(hex.x - 1, hex.y + 1, size_x));
             neighbours.push(Hex::unwrap_coords(hex.x, hex.y + 1, size_x));
         }
@@ -61,12 +61,12 @@ impl Hex {
     }
 
     /// Fixes coordinates which are out of bounds 
-    pub fn unwrap_coords(x: i32, y: i32, size_x: i32) -> (i32, i32) {
+    pub fn unwrap_coords(x: i32, y: i32, size_x: u32) -> (i32, i32) {
         let mut new_x = x;
         if x < -(y/2) {
-            new_x = x + size_x - 1;
-        } else if x >= (size_x - y/2) {
-            new_x = x - size_x;
+            new_x = x + size_x as i32 - 1;
+        } else if x >= (size_x as i32 - y/2) {
+            new_x = x - size_x as i32;
         }
         (new_x, y)
     }

@@ -237,7 +237,7 @@ impl Islands {
         for hex in &mut hex_map.field {
             let mut diff_neighbours = 0;
             // check for neighbours
-            for (neighbour_x, neighbour_y) in Hex::get_neighbours(&hex, hex_map.size_x as i32, hex_map.size_y as i32) {
+            for (neighbour_x, neighbour_y) in Hex::get_neighbours(&hex, hex_map.size_x, hex_map.size_y) {
                 let index = HexMap::coords_to_index(neighbour_x, neighbour_y, old_map.size_x, old_map.size_y);
                 if hex.terrain_type != old_map.field[index].terrain_type {
                     diff_neighbours += 1;
