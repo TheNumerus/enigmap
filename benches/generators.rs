@@ -5,12 +5,12 @@ use criterion::Criterion;
 
 use enigmap::{
     HexMap,
-    generators::{MapGen, Islands}
+    generators::{MapGen, Geo}
 };
 
 fn gen(x: u32, y: u32) {
     let mut hexmap = HexMap::new(x, y);
-    let gen = Islands::default();
+    let gen = Geo::default();
     gen.generate(&mut hexmap);
 }
 
