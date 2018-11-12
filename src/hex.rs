@@ -2,6 +2,7 @@ use rand::{
     distributions::{Distribution, Standard},
     Rng
 };
+use crate::hexmap::HexMap;
 
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone)]
@@ -39,24 +40,24 @@ impl Hex {
     }
 
     /// Returns vector of `Hex` tiles next to specified `Hex`
-    pub fn get_neighbours(hex: &Hex, size_x: u32, size_y: u32) -> Vec<(i32, i32)> {
+    pub fn get_neighbours(&self, hexmap: &HexMap) -> Vec<(i32, i32)> {
         let mut neighbours: Vec<(i32, i32)> = Vec::with_capacity(6);
 
         // bottom
-        if hex.y != (size_y as i32 - 1) {
-            neighbours.push(Hex::unwrap_coords(hex.x - 1, hex.y + 1, size_x));
-            neighbours.push(Hex::unwrap_coords(hex.x, hex.y + 1, size_x));
+        if self.y != (hexmap.size_y as i32 - 1) {
+            neighbours.push(Hex::unwrap_coords(self.x - 1, self.y + 1, hexmap.size_x));
+            neighbours.push(Hex::unwrap_coords(self.x, self.y + 1, hexmap.size_x));
         }
 
         // top
-        if hex.y != 0 {
-            neighbours.push(Hex::unwrap_coords(hex.x + 1, hex.y - 1, size_x));
-            neighbours.push(Hex::unwrap_coords(hex.x, hex.y - 1, size_x));
+        if self.y != 0 {
+            neighbours.push(Hex::unwrap_coords(self.x + 1, self.y - 1, hexmap.size_x));
+            neighbours.push(Hex::unwrap_coords(self.x, self.y - 1, hexmap.size_x));
         }
 
         // sides
-        neighbours.push(Hex::unwrap_coords(hex.x - 1, hex.y, size_x));
-        neighbours.push(Hex::unwrap_coords(hex.x + 1, hex.y, size_x));
+        neighbours.push(Hex::unwrap_coords(self.x - 1, self.y, hexmap.size_x));
+        neighbours.push(Hex::unwrap_coords(self.x + 1, self.y, hexmap.size_x));
         neighbours
     }
 

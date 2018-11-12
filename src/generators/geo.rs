@@ -105,16 +105,18 @@ impl Geo {
                     // finish when frontier is empty
                     None => break
                 };
-                let current_coords = HexMap::index_to_coords(current as u32, hexmap.size_x, hexmap.size_y);
-                for (hex_x, hex_y) in Hex::get_neighbours(&Hex::from_coords(current_coords.0, current_coords.1), hexmap.size_x, hexmap.size_y) {
-                    let index = HexMap::coords_to_index(hex_x, hex_y, hexmap.size_x, hexmap.size_y);
-                    let cost = costs[current][plate_num].unwrap_or(f32::MAX) + get_cost(&noise[current], &noise[index]);
-                    match costs[index][plate_num] {
-                        None | Some(_) if cost < costs[index][plate_num].unwrap_or(f32::MAX) => {
-                            frontier.push_back(index);
-                            costs[index][plate_num] = Some(cost);
+                let current_coords = hexmap.index_to_coords(current as u32);
+                for (hex_x, hex_y) in hexmap.field[current].get_neighbours(&hexmap) {
+                    let index = hexmap.coords_to_index(hex_x, hex_y);
+                    let cost = costs[current][plate_num].unwrap() + get_cost(&noise[current], &noise[index]);
+                    costs[index][plate_num] = match costs[index][plate_num] {
+                        Some(val) if cost >= val => {
+                            continue
                         },
-                        _ => {}
+                        _ => {
+                            frontier.push_back(index);
+                            Some(cost)
+                        }
                     };
                 }
             }
