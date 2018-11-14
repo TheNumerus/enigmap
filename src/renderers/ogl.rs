@@ -21,12 +21,10 @@ impl OGL {
     fn get_hex_points(hex: &Hex) -> Vec<Vertex> {
         let mut verts: Vec<Vertex> = Vec::new();
         // divide hex into 4 triangles
-        verts.push(Vertex::from_tupple(OGL::get_hex_vertex(hex, 5)));
-        verts.push(Vertex::from_tupple(OGL::get_hex_vertex(hex, 4)));
-        verts.push(Vertex::from_tupple(OGL::get_hex_vertex(hex, 0)));
-        verts.push(Vertex::from_tupple(OGL::get_hex_vertex(hex, 3)));
-        verts.push(Vertex::from_tupple(OGL::get_hex_vertex(hex, 1)));
-        verts.push(Vertex::from_tupple(OGL::get_hex_vertex(hex, 2)));
+        let indices = [5,4,0,3,1,2];
+        for i in 0..6 {
+            verts.push(Vertex::from_tupple(OGL::get_hex_vertex(hex, indices[i])));
+        }
         verts
     }
     /// Should the map repeat on the X axis
