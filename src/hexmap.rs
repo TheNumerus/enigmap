@@ -24,7 +24,7 @@ pub struct HexMap {
 impl HexMap {
     /// Creates new `Hexmap` based on dimensions with all `Hex` tiles populated and with correct coordinates
     pub fn new(size_x: u32, size_y: u32) -> HexMap {
-        let mut field: Vec<Hex> = Vec::with_capacity((size_x * size_y) as usize);
+        let field: Vec<Hex> = Vec::with_capacity((size_x * size_y) as usize);
         let absolute_size_x = size_x as f32 + 0.7;
         let absolute_size_y = RATIO + 0.3 + (size_y as f32 - 1.0) * RATIO * 3.0 / 4.0;
 
