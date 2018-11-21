@@ -1,10 +1,12 @@
 use glium::*;
 use rand::prelude::*;
-use image::{RgbImage, ImageBuffer, DynamicImage};
+use image::{RgbImage, ImageBuffer, DynamicImage, Rgb};
 
 use crate::hexmap::HexMap;
 use crate::hex::{Hex, HexType, RATIO};
 use crate::renderers::Renderer;
+
+const TILE_SIZE: u32 = 512;
 
 /// Basic hardware renderer
 /// 
@@ -35,8 +37,10 @@ impl OGL {
 
 impl Renderer for OGL {
     fn render(&self, map: &HexMap) -> RgbImage {
-        let w = (map.absolute_size_x * self.multiplier) as f64;
-        let h = (map.absolute_size_y * self.multiplier) as f64;
+        let w = TILE_SIZE as f64;//(map.absolute_size_x * self.multiplier) as f64;
+        let h = w;//(map.absolute_size_y * self.multiplier) as f64;
+        let tiles_x = ((map.absolute_size_x * self.multiplier) / TILE_SIZE as f32).ceil() as u32;
+        let tiles_y = ((map.absolute_size_y * self.multiplier) / TILE_SIZE as f32).ceil() as u32;
 
         let events_loop = glutin::EventsLoop::new();
         let size = glutin::dpi::LogicalSize::new(w, h);
@@ -116,28 +120,49 @@ impl Renderer for OGL {
 
         let program = Program::from_source(&display, vertex_shader_src, fragment_shader_src, None).unwrap();
 
-        // rendering
-        let mut target = display.draw();
-        target.clear_color(0.0, 0.0, 0.0, 1.0);
-        if self.wrap_map {
-            target.clear_color(0.79, 0.82, 0.8, 1.0);
-        }
-        target.draw((&vertex_buffer, per_instance.per_instance().unwrap()),
-            &indices, &program, &uniform! {total_x: map.absolute_size_x, total_y: map.absolute_size_y }, &Default::default()).unwrap();
-        target.finish().unwrap();
+        let mut tiles: Vec<Vec<u8>> = vec![];
 
-        // reading the front buffer into an image
-        let image: texture::RawImage2d<'_, u8> = display.read_front_buffer();
-        let image_data = image.data.into_owned();
-        let mut new_data: Vec<u8> = Vec::new();
-        // remove alpha channel
-        for chunk in image_data.chunks(4) {
-            new_data.push(chunk[0]);
-            new_data.push(chunk[1]);
-            new_data.push(chunk[2]);
+        // rendering
+
+        for y in 0..tiles_y {
+            for x in 0..tiles_x {
+                let mut target = display.draw();
+                target.clear_color(0.0, 0.0, 0.0, 1.0);
+                if self.wrap_map {
+                    target.clear_color(0.79, 0.82, 0.8, 1.0);
+                }
+                let uniforms = uniform! {
+                    total_x: map.absolute_size_x,
+                    total_y: map.absolute_size_y,
+                    win_size: TILE_SIZE as f32,
+                    mult: self.multiplier,
+                    tile_x: x as f32,
+                    tile_y: y as f32
+                };
+                target.draw((&vertex_buffer, per_instance.per_instance().unwrap()),
+                    &indices, &program, &uniforms, &Default::default()).unwrap();
+                target.finish().unwrap();
+
+                // reading the front buffer into an image
+                let image: texture::RawImage2d<'_, u8> = display.read_front_buffer();
+                let image_data = image.data.into_owned();
+                tiles.push(image_data);
+            }
         }
-        let mut imgbuf = ImageBuffer::from_raw(image.width, image.height, new_data).unwrap();
-        imgbuf = DynamicImage::ImageRgb8(imgbuf).flipv().to_rgb();
+
+        let target_size_x = (map.absolute_size_x * self.multiplier) as u32;
+        let target_size_y = (map.absolute_size_y * self.multiplier) as u32;
+        let mut imgbuf: ImageBuffer<Rgb<u8>, Vec<u8>> = ImageBuffer::from_fn(target_size_x, target_size_y, |x, y| {
+            let tile_x = x / TILE_SIZE;
+            let tile_y = y / TILE_SIZE;
+            let tile_idx = (tile_x + tile_y * tiles_x) as usize;
+            let x = x - tile_x * TILE_SIZE;
+            let y = y - tile_y * TILE_SIZE;
+            let index = 4 * (x + y * TILE_SIZE) as usize;
+            // remove alpha channel
+            Rgb([tiles[tile_idx][index], tiles[tile_idx][index + 1], tiles[tile_idx][index + 2]])
+        });
+        imgbuf = DynamicImage::ImageRgb8(imgbuf).to_rgb();
         imgbuf
     }
 
