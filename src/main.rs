@@ -26,7 +26,7 @@ fn main() {
 
     bencher(| | {
         gen.generate(&mut hexmap);
-    }, "Generation");
+    }, "Generation", 1);
 
     // render image
     let mut renderer = OGL::default();
@@ -37,7 +37,7 @@ fn main() {
 
     bencher(| | {
         img = renderer.render(&hexmap);
-    }, "Rendering");
+    }, "Rendering", 10);
 
     // create folder for image if needed
     let path = "./out";
@@ -48,7 +48,7 @@ fn main() {
     // save image
     bencher(| | {
         img.save("./out/image.png").unwrap();
-    }, "Saving");
+    }, "Saving", 1);
 }
 
 
@@ -85,10 +85,12 @@ fn get_size() -> (u32, u32) {
     (get_u32("size X", 100), get_u32("size Y", 75))
 }
 
-fn bencher<T>(mut test: T, name: &str)
+fn bencher<T>(mut test: T, name: &str, iter: u32)
     where T: FnMut()
 {
-    let time = Instant::now();
-    test();
-    println!("{} took {}.{:03} seconds", name, time.elapsed().as_secs(), time.elapsed().subsec_millis());
+    for _i in 0..iter {
+        let time = Instant::now();
+        test();
+        println!("{} took {}.{:03} seconds", name, time.elapsed().as_secs(), time.elapsed().subsec_millis());
+    }
 }
