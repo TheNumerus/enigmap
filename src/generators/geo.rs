@@ -1,6 +1,6 @@
 use rand::prelude::*;
 use rand::rngs::StdRng;
-use noise::{Fbm, NoiseFn, Seedable};
+use noise::{Fbm, NoiseFn};
 use std::collections::VecDeque;
 use std::f32;
 
@@ -32,7 +32,7 @@ impl Geo {
         (noise_x, noise_y)
     }
 
-    fn generate_plates(&self, hexmap: &mut HexMap, seed: u32) {
+    fn generate_plates(&self, hexmap: &mut HexMap, seed: u32) -> Plates {
         let f = Fbm::new();
 
         let mut rng = StdRng::from_seed(Geo::seed_to_rng_seed(seed));
@@ -105,7 +105,6 @@ impl Geo {
                     // finish when frontier is empty
                     None => break
                 };
-                let current_coords = hexmap.index_to_coords(current as u32);
                 for (hex_x, hex_y) in hexmap.field[current].get_neighbours(&hexmap) {
                     let index = hexmap.coords_to_index(hex_x, hex_y);
                     let cost = costs[current][plate_num].unwrap() + get_cost(&noise[current], &noise[index]);
@@ -122,6 +121,7 @@ impl Geo {
             }
         }
         // asign hexes to plates
+        let mut plate_stats = vec![0; self.num_plates as usize];
         for (index, hex_costs) in costs.iter().enumerate() {
             let mut min_cost = f32::MAX;
             let mut final_index = 0;
@@ -132,15 +132,147 @@ impl Geo {
                 }
             }
             hexmap.field[index].terrain_type = plates[final_index].1;
-            //hexmap.field[index].terrain_type = HexType::DEBUG(min_cost / 5.0);
+            plate_stats[final_index] = plate_stats[final_index] + 1;
         }
-        //for hex in &hexmap.field {
-        //    match hex.terrain_type {
-        //        _type => println!("{:?}", _type)
-        //    };
-        //}
         // delete small plates
+        let mut hexes_to_fill = 0;
+        let threshold = hexmap.size_x as f32 * hexmap.size_y as f32 * 0.005;
+        for hex in &mut hexmap.field {
+            for (index, plate) in plates.iter().enumerate() {
+                if hex.terrain_type == plate.1 && (plate_stats[index] as f32) < threshold {
+                    // using water as a placeholder
+                    hex.terrain_type = HexType::WATER;
+                    hexes_to_fill = hexes_to_fill + 1;
+                    plate_stats[index] = plate_stats[index] - 1;
+                }
+            }
+        }
         // delete orphan islands
+        for (plate_num, (plate_index, plate_type)) in plates.iter().enumerate() {
+            // handle deleted islands
+            if plate_stats[plate_num] == 0 {
+                continue;
+            }
+            let mut frontier: VecDeque<usize> = VecDeque::new();
+            frontier.push_front(*plate_index);
+            let mut neighbours: Vec<bool> = vec![false; self.num_plates as usize];
+            let mut neighbours_num = 0;
+            let mut visited: Vec<bool> = vec![false; (hexmap.size_x * hexmap.size_y) as usize];
+            visited[*plate_index] = true;
+            while !frontier.is_empty() {
+                let current = match frontier.pop_front() {
+                    Some(val) => val,
+                    // finish when frontier is empty
+                    None => break
+                };
+                for (hex_x, hex_y) in hexmap.field[current].get_neighbours(&hexmap) {
+                    let index = hexmap.coords_to_index(hex_x, hex_y);
+                    let neighbour_type = hexmap.field[index].terrain_type;
+                    if neighbour_type == *plate_type {
+                        if !visited[index] {
+                            frontier.push_back(index);
+                            visited[index] = true;
+                        }
+                        continue;
+                    }
+                    // find neighbour plate index
+                    let mut neighbour_plate_index = 0;
+                    for (index, (_plate_center, terrain_type)) in plates.iter().enumerate() {
+                        if *terrain_type == neighbour_type {
+                            neighbour_plate_index = index;
+                            break;
+                        }
+                    }
+                    // skip if this hex has the same type as center
+                    if neighbours[neighbour_plate_index] == false {
+                        neighbours[neighbour_plate_index] = true;
+                        neighbours_num = neighbours_num + 1;
+                    }
+                }
+            }
+            // only one neighbour => island
+            if neighbours_num == 1 {
+                for hex in &mut hexmap.field {
+                    if hex.terrain_type == *plate_type {
+                        hex.terrain_type = HexType::WATER;
+                        hexes_to_fill = hexes_to_fill + 1;
+                        plate_stats[plate_num] = plate_stats[plate_num] - 1;
+                    }
+                }
+            }
+        }
+        // now fill holes
+        while hexes_to_fill != 0 {
+            let oldmap = hexmap.clone();
+            let mut neighbours: Vec<u32>;
+            for (index, hex) in hexmap.field.iter_mut().enumerate() {
+                // skip non-placeholder tiles
+                match hex.terrain_type {
+                    HexType::WATER => {},
+                    _ => continue
+                };
+                neighbours = vec![0; self.num_plates as usize];
+                // check neighbour types
+                for (hex_x, hex_y) in oldmap.field[index].get_neighbours(&oldmap) {
+                    let index = oldmap.coords_to_index(hex_x, hex_y);
+                    let neighbour_type = oldmap.field[index].terrain_type;
+                    if let HexType::WATER = neighbour_type {
+                        continue;
+                    }
+                    // find neighbour plate index
+                    let mut neighbour_plate_index = 0;
+                    for (index, (_plate_center, terrain_type)) in plates.iter().enumerate() {
+                        if *terrain_type == neighbour_type {
+                            neighbour_plate_index = index;
+                            break;
+                        }
+                    }
+                    neighbours[neighbour_plate_index] = neighbours[neighbour_plate_index] + 1;
+                }
+                // get most used neighbour
+                let mut max_num = 0;
+                let mut max_num_index = 0;
+                for (index, num) in neighbours.iter().enumerate() {
+                    if max_num < *num {
+                        max_num = *num;
+                        max_num_index = index
+                    }
+                }
+                if max_num > 1 {
+                    hex.terrain_type = plates[max_num_index].1;
+                    hexes_to_fill = hexes_to_fill - 1;
+                }
+            }
+        }
+        // now return generated values
+        let mut indices: Vec<(usize, usize)> = vec!();
+        let mut directions: Vec<(f32, f32)> = vec!();
+        for i in 0..self.num_plates as usize {
+            if plate_stats[i] != 0 {
+                let mut dir: (f32, f32) = (rng.gen_range(-1.0, 1.0), rng.gen_range(-1.0, 1.0));
+                let len = (dir.0 * dir.0 + dir.1 * dir.1).sqrt();
+                dir.0 /= len;
+                dir.1 /= len;
+                directions.push(dir);
+                for (index, hex) in hexmap.field.iter().enumerate() {
+                    if hex.terrain_type == plates[i].1 {
+                        indices.push((index, directions.len() - 1));
+                    }
+                }
+            }
+        }
+        indices.sort_unstable_by(|a, b| {
+            (a.0).cmp(&b.0)
+        });
+        Plates{indices, directions}
+    }
+
+    fn generate_height(&self, hexmap: &mut HexMap, plates: &Plates) -> Vec<f32> {
+        for (index, hex) in hexmap.field.iter_mut().enumerate() {
+            let dir = plates.directions[plates.indices[index].1];
+            hex.terrain_type = HexType::DEBUG_2D((dir.0 * 0.5 + 0.5, dir.1 * 0.5 + 0.5));
+        }
+        vec!()
     }
 }
 
@@ -157,11 +289,18 @@ impl MapGen for Geo {
             true => self.seed,
         };
 
-        self.generate_plates(hex_map, seed);
+        let plates = self.generate_plates(hex_map, seed);
+        let _heights = self.generate_height(hex_map, &plates);
     }
 
     fn set_seed(&mut self, seed: u32) {
         self.using_seed = true;
         self.seed = seed;
     }
+}
+
+#[derive(Debug)]
+struct Plates {
+    pub indices: Vec<(usize, usize)>,
+    pub directions: Vec<(f32, f32)>,
 }
