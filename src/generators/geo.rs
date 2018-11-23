@@ -58,6 +58,7 @@ impl Geo {
             }
             plates.push((hex_index, rand_type));
         }
+        debug_println!("plate centers generated");
 
         // compute and blend noise on the left
         for hex in &mut hexmap.field {
@@ -93,6 +94,7 @@ impl Geo {
                 -1.5 * (dot - 1.4)
             ), 0.0001)
         };
+        debug_println!("noise generated");
         // generate plates
         let mut costs: Vec<Vec<Option<f32>>> = vec![vec![None; plates.len()]; (hexmap.size_x * hexmap.size_y) as usize];
         for (plate_num, (plate_index, _type)) in plates.iter().enumerate() {
@@ -120,6 +122,7 @@ impl Geo {
                 }
             }
         }
+        debug_println!("plates generated");
         // asign hexes to plates
         let mut plate_stats = vec![0; self.num_plates as usize];
         for (index, hex_costs) in costs.iter().enumerate() {
@@ -134,6 +137,7 @@ impl Geo {
             hexmap.field[index].terrain_type = plates[final_index].1;
             plate_stats[final_index] = plate_stats[final_index] + 1;
         }
+        debug_println!("plates assigned");
         // delete small plates
         let mut hexes_to_fill = 0;
         let threshold = hexmap.size_x as f32 * hexmap.size_y as f32 * 0.005;
@@ -201,6 +205,7 @@ impl Geo {
                 }
             }
         }
+        debug_println!("plates cleaned");
         // now fill holes
         while hexes_to_fill != 0 {
             let oldmap = hexmap.clone();
@@ -244,6 +249,7 @@ impl Geo {
                 }
             }
         }
+        debug_println!("plates filled");
         // now return generated values
         let mut indices: Vec<(usize, usize)> = vec!();
         let mut directions: Vec<(f32, f32)> = vec!();
@@ -290,6 +296,7 @@ impl MapGen for Geo {
         };
 
         let plates = self.generate_plates(hex_map, seed);
+        debug_println!("plates done");
         let _heights = self.generate_height(hex_map, &plates);
     }
 

@@ -6,7 +6,7 @@ use crate::hexmap::HexMap;
 use crate::hex::{Hex, HexType, RATIO};
 use crate::renderers::Renderer;
 
-const TILE_SIZE: u32 = 512;
+const TILE_SIZE: u32 = 1024;
 
 /// Basic hardware renderer
 /// 
@@ -37,8 +37,8 @@ impl OGL {
 
 impl Renderer for OGL {
     fn render(&self, map: &HexMap) -> RgbImage {
-        let w = TILE_SIZE as f64;//(map.absolute_size_x * self.multiplier) as f64;
-        let h = w;//(map.absolute_size_y * self.multiplier) as f64;
+        let w = TILE_SIZE as f64;
+        let h = w;
         let tiles_x = ((map.absolute_size_x * self.multiplier) / TILE_SIZE as f32).ceil() as u32;
         let tiles_y = ((map.absolute_size_y * self.multiplier) / TILE_SIZE as f32).ceil() as u32;
 
@@ -120,6 +120,8 @@ impl Renderer for OGL {
 
         let program = Program::from_source(&display, vertex_shader_src, fragment_shader_src, None).unwrap();
 
+        debug_println!("program generated");
+
         let mut tiles: Vec<Vec<u8>> = vec![];
 
         // rendering
@@ -149,6 +151,7 @@ impl Renderer for OGL {
                 tiles.push(image_data);
             }
         }
+        debug_println!("tiles rendered");
 
         let target_size_x = (map.absolute_size_x * self.multiplier) as u32;
         let target_size_y = (map.absolute_size_y * self.multiplier) as u32;
@@ -162,6 +165,7 @@ impl Renderer for OGL {
             // remove alpha channel
             Rgb([tiles[tile_idx][index], tiles[tile_idx][index + 1], tiles[tile_idx][index + 2]])
         });
+        debug_println!("image generated");
         imgbuf = DynamicImage::ImageRgb8(imgbuf).to_rgb();
         imgbuf
     }
