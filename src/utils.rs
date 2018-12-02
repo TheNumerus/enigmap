@@ -11,15 +11,15 @@ pub fn check_debug() -> bool {
             // check for error while parsing
             let val = match val {
                 Ok(some) => some,
-                Err(_) => 0
+                Err(_) => 0,
             };
             match val {
                 1 => true,
                 _ => false,
             }
-        },
+        }
         // if non existent, set false
-        None => false
+        None => false,
     }
 }
 

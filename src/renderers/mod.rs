@@ -1,5 +1,5 @@
-use crate::hexmap::HexMap;
 use crate::hex::{Hex, RATIO};
+use crate::hexmap::HexMap;
 use image::RgbImage;
 
 mod basic;
@@ -11,18 +11,17 @@ pub use self::ogl::OGL;
 /// Trait for `HexMap` renderers
 pub trait Renderer {
     /// Main function used when rendering `HexMap`
-    /// 
+    ///
     /// Returns `image::RgbImage`
     fn render(&self, map: &HexMap) -> RgbImage;
 
     /// Set scale of rendered hexagons
     fn set_scale(&mut self, scale: f32);
 
-
     /// Returns `Hex` vertex positon in relative (non-multiplied) coordinates
-    /// 
+    ///
     /// Index starts on upper right vertex and continues clockwise
-    /// 
+    ///
     /// # Panics
     /// when index is out of range `0 <= x <= 5`
     //     5

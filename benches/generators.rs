@@ -4,8 +4,8 @@ extern crate criterion;
 use criterion::Criterion;
 
 use enigmap::{
+    generators::{Geo, MapGen},
     HexMap,
-    generators::{MapGen, Geo}
 };
 
 fn gen(x: u32, y: u32) {

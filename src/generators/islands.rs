@@ -1,11 +1,11 @@
+use noise::{Fbm, NoiseFn, Perlin, Seedable, Worley};
 use rand::prelude::*;
 use rand::rngs::StdRng;
-use noise::{Fbm, NoiseFn, Seedable, Worley, Perlin};
 use std::f32;
 
-use crate::hexmap::HexMap;
-use crate::hex::{Hex, HexType};
 use crate::generators::MapGen;
+use crate::hex::{Hex, HexType};
+use crate::hexmap::HexMap;
 
 /// Generator that generates multiple islands
 pub struct Islands {
@@ -16,14 +16,18 @@ pub struct Islands {
 impl Islands {
     /// Generates ice on top and bootom
     fn ice_pass<T>(&self, hex_map: &mut HexMap, gen: &T, noise_scale: f64, seed: u32)
-        where T: NoiseFn<[f64; 2]>
+    where
+        T: NoiseFn<[f64; 2]>,
     {
         // generate ice
         for hex in &mut hex_map.field {
             // hex specific fields
-            let worley_val = gen.get([hex.center_x as f64 * noise_scale + seed as f64, hex.center_y as f64 * noise_scale]);
+            let worley_val = gen.get([
+                hex.center_x as f64 * noise_scale + seed as f64,
+                hex.center_y as f64 * noise_scale,
+            ]);
             let dst_to_edge = 1.0 - ((hex.center_y / hex_map.absolute_size_y - 0.5).abs() * 2.0);
-            
+
             // make sure ice is certain to appear
             if hex.y == 0 || hex.y == (hex_map.size_y as i32 - 1) {
                 hex.terrain_type = HexType::ICE;
@@ -41,15 +45,18 @@ impl Islands {
         }
     }
 
-
     /// Generates land
     fn land_pass<T>(&self, hex_map: &mut HexMap, gen: &T, noise_scale: f64, seed: u32)
-        where T:NoiseFn<[f64; 2]>
+    where
+        T: NoiseFn<[f64; 2]>,
     {
         // generate and clear up small islands
         for hex in &mut hex_map.field {
             if let HexType::WATER = hex.terrain_type {
-                let noise_val = gen.get([hex.center_x as f64 * noise_scale + seed as f64, hex.center_y as f64 * noise_scale]);
+                let noise_val = gen.get([
+                    hex.center_x as f64 * noise_scale + seed as f64,
+                    hex.center_y as f64 * noise_scale,
+                ]);
                 if noise_val > 0.36 {
                     hex.terrain_type = HexType::FIELD;
                 }
@@ -67,10 +74,13 @@ impl Islands {
             // get first focus
             let x: f32 = rng.gen_range(0.0, hex_map.absolute_size_x);
             let y: f32 = rng.gen_range(0.1, 0.9) * hex_map.absolute_size_y;
-            let first_focus = (x,y);
+            let first_focus = (x, y);
 
             // get aproximate center of the map
-            let center = (hex_map.absolute_size_x / 2.0 + rng.gen_range(-10.0, 10.0), hex_map.absolute_size_y / 2.0 + rng.gen_range(-10.0, 10.0));
+            let center = (
+                hex_map.absolute_size_x / 2.0 + rng.gen_range(-10.0, 10.0),
+                hex_map.absolute_size_y / 2.0 + rng.gen_range(-10.0, 10.0),
+            );
 
             // get unit vector with direction from first focus to center
             let mut vector = (center.0 - first_focus.0, center.1 - first_focus.1);
@@ -79,25 +89,44 @@ impl Islands {
             vector.1 /= len;
 
             // multiply it by random value and get second focus
-            let island_len: f32 = rng.gen_range(hex_map.absolute_size_y / 4.0, hex_map.absolute_size_y / 2.5);
-            let second_focus = (first_focus.0 + vector.0 * island_len, first_focus.1 + vector.1 * island_len);
+            let island_len: f32 =
+                rng.gen_range(hex_map.absolute_size_y / 4.0, hex_map.absolute_size_y / 2.5);
+            let second_focus = (
+                first_focus.0 + vector.0 * island_len,
+                first_focus.1 + vector.1 * island_len,
+            );
 
             // between them is center of the big island
-            let center_focus = ((first_focus.0 + second_focus.0) / 2.0, (first_focus.1 + second_focus.1) / 2.0);
+            let center_focus = (
+                (first_focus.0 + second_focus.0) / 2.0,
+                (first_focus.1 + second_focus.1) / 2.0,
+            );
 
             // now generate landmasses
             for hex in &mut hex_map.field {
                 // skip tiles that aren't water
                 match hex.terrain_type {
-                    HexType::WATER => {},
-                    _ => continue
+                    HexType::WATER => {}
+                    _ => continue,
                 };
-                let noise_val = gen.get([hex.center_x as f64 * noise_scale + seed as f64, hex.center_y as f64 * noise_scale]);
+                let noise_val = gen.get([
+                    hex.center_x as f64 * noise_scale + seed as f64,
+                    hex.center_y as f64 * noise_scale,
+                ]);
                 // get distances to selecte points and generate islands from those
-                let first_dst = ((hex.center_x - first_focus.0).powi(2) + (hex.center_y - first_focus.1).powi(2)).sqrt();
-                let second_dst = ((hex.center_x - second_focus.0).powi(2) + (hex.center_y - second_focus.1).powi(2)).sqrt();
-                let center_dst = ((hex.center_x - center_focus.0).powi(2) + (hex.center_y - center_focus.1).powi(2)).sqrt() * 0.6;
-                let elipse_dst = f32::min(center_dst, f32::min(first_dst, second_dst)) / hex_map.absolute_size_x * 100.0;
+                let first_dst = ((hex.center_x - first_focus.0).powi(2)
+                    + (hex.center_y - first_focus.1).powi(2))
+                .sqrt();
+                let second_dst = ((hex.center_x - second_focus.0).powi(2)
+                    + (hex.center_y - second_focus.1).powi(2))
+                .sqrt();
+                let center_dst = ((hex.center_x - center_focus.0).powi(2)
+                    + (hex.center_y - center_focus.1).powi(2))
+                .sqrt()
+                    * 0.6;
+                let elipse_dst = f32::min(center_dst, f32::min(first_dst, second_dst))
+                    / hex_map.absolute_size_x
+                    * 100.0;
                 if (noise_val as f32 * 3.0 + elipse_dst) < 4.0 {
                     hex.terrain_type = HexType::FIELD;
                 }
@@ -107,9 +136,9 @@ impl Islands {
 
     /// Changes tiles with `HexType::FIELD` to something different based on position
     fn decorator_pass<T>(&self, hex_map: &mut HexMap, gen: &T, noise_scale: f64, seed: u32)
-        where T:NoiseFn<[f64; 2]>
+    where
+        T: NoiseFn<[f64; 2]>,
     {
-
         let mut rng = StdRng::from_seed(Islands::seed_to_rng_seed(seed));
         for hex in &mut hex_map.field {
             // skip everything thats not land and generate mountains
@@ -119,12 +148,15 @@ impl Islands {
                         hex.terrain_type = HexType::MOUNTAIN;
                         continue;
                     }
-                }, 
-                _ => continue
+                }
+                _ => continue,
             };
 
             let dst_to_edge = 1.0 - ((hex.center_y / hex_map.absolute_size_y - 0.5).abs() * 2.0);
-            let noise_val = gen.get([hex.center_x as f64 * noise_scale + seed as f64, hex.center_y as f64 * noise_scale]);
+            let noise_val = gen.get([
+                hex.center_x as f64 * noise_scale + seed as f64,
+                hex.center_y as f64 * noise_scale,
+            ]);
             let temperature = 70.0 * dst_to_edge - 20.0 + noise_val as f32 * 5.0;
             hex.terrain_type = if temperature < -5.0 {
                 HexType::TUNDRA
@@ -142,8 +174,14 @@ impl Islands {
         // and areas with wind blowing to them will be jungles
         let mut wind_field: Vec<(f32, f32)> = Vec::new();
         for hex in &hex_map.field {
-            let noise_val_x = gen.get([hex.center_x as f64 * 0.15 * noise_scale + seed as f64, hex.center_y as f64 * 0.15 * noise_scale]) as f32;
-            let noise_val_y = gen.get([hex.center_x as f64 * 0.15 * noise_scale - seed as f64, hex.center_y as f64 * 0.15 * noise_scale]) as f32;
+            let noise_val_x = gen.get([
+                hex.center_x as f64 * 0.15 * noise_scale + seed as f64,
+                hex.center_y as f64 * 0.15 * noise_scale,
+            ]) as f32;
+            let noise_val_y = gen.get([
+                hex.center_x as f64 * 0.15 * noise_scale - seed as f64,
+                hex.center_y as f64 * 0.15 * noise_scale,
+            ]) as f32;
             let len = (noise_val_x.powi(2) + noise_val_y.powi(2)).sqrt() as f32;
             wind_field.push((noise_val_x / len, noise_val_y / len));
         }
@@ -152,8 +190,8 @@ impl Islands {
         for (index, hex) in hex_map.field.iter_mut().enumerate() {
             // skip not deserts
             match hex.terrain_type {
-                HexType::DESERT => {},
-                _ => continue
+                HexType::DESERT => {}
+                _ => continue,
             }
             let (x_wind, y_wind) = wind_field[index];
 
@@ -174,9 +212,9 @@ impl Islands {
             match old_field[target_hex_index].terrain_type {
                 HexType::WATER | HexType::OCEAN => {
                     hex.terrain_type = HexType::JUNGLE;
-                },
+                }
                 _ => {}
-            } 
+            }
             /* debug wind direction
             if x_wind > 0.0 && y_wind > 0.0 {
                 hex.terrain_type = HexType::WATER;
@@ -191,26 +229,30 @@ impl Islands {
     }
 
     /// Generates oceans by changing `HexType::WATER` tiles into `HexType::OCEAN`
-    /// 
+    ///
     /// Uses same generator as land pass for better ocean generation
     fn ocean_pass<T>(&self, hex_map: &mut HexMap, gen: &T, noise_scale: f64, seed: u32)
-        where T:NoiseFn<[f64; 2]>
+    where
+        T: NoiseFn<[f64; 2]>,
     {
         let mut old_field: Vec<Hex> = Vec::new();
         for hex in &mut hex_map.field {
             match hex.terrain_type {
                 HexType::WATER | HexType::ICE | HexType::OCEAN => continue,
-                _ => old_field.push(hex.clone())
+                _ => old_field.push(hex.clone()),
             };
         }
         for hex in &mut hex_map.field {
             // skip everything thats not water
             match hex.terrain_type {
-                HexType::WATER => {}, 
-                _ => continue
+                HexType::WATER => {}
+                _ => continue,
             };
             let mut dst_to_land = i32::max_value();
-            let noise_val = gen.get([hex.center_x as f64 * noise_scale + seed as f64, hex.center_y as f64 * noise_scale]);
+            let noise_val = gen.get([
+                hex.center_x as f64 * noise_scale + seed as f64,
+                hex.center_y as f64 * noise_scale,
+            ]);
             // get distance to land
             for other in &old_field {
                 let dst = hex.distance_to(&other);
@@ -252,7 +294,10 @@ impl Islands {
 
 impl Default for Islands {
     fn default() -> Islands {
-        Islands{seed: 0, using_seed: false}
+        Islands {
+            seed: 0,
+            using_seed: false,
+        }
     }
 }
 
@@ -275,7 +320,7 @@ impl MapGen for Islands {
         // noise scale
         let noise_scale = 60.0 / hex_map.absolute_size_x as f64;
         let land_noise_scale = 8.0 / hex_map.absolute_size_x as f64;
-        
+
         self.ice_pass(hex_map, &w, noise_scale, seed);
         debug_println!("Ice generated");
         self.land_pass(hex_map, &f, land_noise_scale, seed);

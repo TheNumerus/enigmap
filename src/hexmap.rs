@@ -1,4 +1,4 @@
-use crate::hex::{RATIO, Hex};
+use crate::hex::{Hex, RATIO};
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone)]
 /// Base data structure for generated map
@@ -8,15 +8,15 @@ pub struct HexMap {
     /// Number of `Hex` tiles in Y direction
     pub size_y: u32,
     /// `Hex` tiles storage
-    /// 
+    ///
     /// Stored from left to right and from top to bottom
     pub field: Vec<Hex>,
     /// Absolute size of `HexMap` in X axis
-    /// 
+    ///
     /// Used when rendering and computing relative position of specific `Hex`
     pub absolute_size_x: f32,
     /// Absolute size of `HexMap` in Y axis
-    /// 
+    ///
     /// Used when rendering and computing relative position of specific `Hex`
     pub absolute_size_y: f32,
 }
@@ -28,7 +28,13 @@ impl HexMap {
         let absolute_size_x = size_x as f32 + 0.7;
         let absolute_size_y = RATIO + 0.3 + (size_y as f32 - 1.0) * RATIO * 3.0 / 4.0;
 
-        let mut map = HexMap{size_x, size_y, field, absolute_size_x, absolute_size_y};
+        let mut map = HexMap {
+            size_x,
+            size_y,
+            field,
+            absolute_size_x,
+            absolute_size_y,
+        };
         for i in 0..(size_x * size_y) {
             let coords = map.index_to_coords(i);
             let hex = Hex::from_coords(coords.0, coords.1);
@@ -46,7 +52,7 @@ impl HexMap {
         let offset = y / 2;
         let index = (base + x + offset) as usize;
         if index > (self.size_x * self.size_y) as usize {
-            panic!{"index {} out of range", index};
+            panic! {"index {} out of range", index};
         }
         index
     }
@@ -56,7 +62,7 @@ impl HexMap {
     /// when specified index is out of bounds
     pub fn index_to_coords(&self, i: u32) -> (i32, i32) {
         if i >= self.size_x * self.size_y {
-            panic!{"index {} out of range", i};
+            panic! {"index {} out of range", i};
         }
         let line = i as i32 / self.size_x as i32;
         let pos = i as i32 - line * self.size_x as i32 - (line / 2);
