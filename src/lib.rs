@@ -1,5 +1,5 @@
 //!Hexagonal map generator and renderer written in Rust.
-//! 
+//!
 //!## Basic usage
 //!```rust
 //!use enigmap::{
@@ -21,22 +21,22 @@
 #[macro_use]
 extern crate serde;
 
-mod hexmap;
 mod hex;
+mod hexmap;
 
 #[macro_use]
 mod utils;
 
 /// Reimports for basic usage
 pub mod prelude {
+    pub use crate::generators::MapGen;
     pub use crate::hexmap::HexMap;
     pub use crate::renderers::Renderer;
-    pub use crate::generators::MapGen;
 }
 
 pub use crate::hex::{Hex, HexType};
 pub use crate::hexmap::HexMap;
-/// Renderers
-pub mod renderers;
 /// Map generators
 pub mod generators;
+/// Renderers
+pub mod renderers;

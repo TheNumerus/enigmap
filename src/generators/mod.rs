@@ -1,15 +1,15 @@
 use crate::hexmap::HexMap;
 
 mod circle;
-mod islands;
 mod geo;
+mod islands;
 
 pub use self::circle::Circle;
-pub use self::islands::Islands;
 pub use self::geo::Geo;
+pub use self::islands::Islands;
 
 /// Trait for map generators
-/// 
+///
 /// Provides useful functions used while genetaing map which are not generator dependent
 pub trait MapGen {
     /// Main generation fuction

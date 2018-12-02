@@ -1,24 +1,25 @@
+use noise::{Fbm, NoiseFn};
 use rand::prelude::*;
 use rand::rngs::StdRng;
-use noise::{Fbm, NoiseFn};
 use std::collections::VecDeque;
 use std::f32;
 
 use crate::generators::MapGen;
-use crate::hexmap::HexMap;
 use crate::hex::{Hex, HexType};
+use crate::hexmap::HexMap;
 
 /// Geological generator
 pub struct Geo {
     seed: u32,
     using_seed: bool,
     /// number of tectonic plates to generate
-    pub num_plates: u32
+    pub num_plates: u32,
 }
 
 impl Geo {
     fn get_noise_val<T>(seed: u32, hex: &Hex, gen: T, scale: f32) -> (f32, f32)
-        where T: NoiseFn<[f64; 2]>
+    where
+        T: NoiseFn<[f64; 2]>,
     {
         let sample_x = (hex.center_x / scale) as f64;
         let sample_y = (hex.center_y / scale) as f64;
@@ -26,8 +27,14 @@ impl Geo {
         let base_noise_x = gen.get([sample_x + seed as f64, sample_y]);
         let base_noise_y = gen.get([sample_x, sample_y - seed as f64]);
 
-        let noise_x = gen.get([sample_x + base_noise_x, sample_y + base_noise_y + seed as f64 - 5000.0]) as f32; // subtract 5000 to offset seed adding
-        let noise_y = gen.get([sample_x - seed as f64 + base_noise_x, sample_y + base_noise_y]) as f32;
+        let noise_x = gen.get([
+            sample_x + base_noise_x,
+            sample_y + base_noise_y + seed as f64 - 5000.0,
+        ]) as f32; // subtract 5000 to offset seed adding
+        let noise_y = gen.get([
+            sample_x - seed as f64 + base_noise_x,
+            sample_y + base_noise_y,
+        ]) as f32;
 
         (noise_x, noise_y)
     }
@@ -87,16 +94,14 @@ impl Geo {
             //let z = 0.9;
             //let w = 2.0;
             //f32::max(f32::min((x * (-dot + z)).ln() / w + y - dot, 10.0), 0.0)
-            
+
             // aproximated cost function, around 6x faster
-            f32::max(f32::min(
-                -4.0 * (dot - 0.85),
-                -1.5 * (dot - 1.4)
-            ), 0.0001)
+            f32::max(f32::min(-4.0 * (dot - 0.85), -1.5 * (dot - 1.4)), 0.0001)
         };
         debug_println!("noise generated");
         // generate plates
-        let mut costs: Vec<Vec<Option<f32>>> = vec![vec![None; plates.len()]; (hexmap.size_x * hexmap.size_y) as usize];
+        let mut costs: Vec<Vec<Option<f32>>> =
+            vec![vec![None; plates.len()]; (hexmap.size_x * hexmap.size_y) as usize];
         for (plate_num, (plate_index, _type)) in plates.iter().enumerate() {
             let mut frontier: VecDeque<usize> = VecDeque::new();
             frontier.push_front(*plate_index);
@@ -105,15 +110,14 @@ impl Geo {
                 let current = match frontier.pop_front() {
                     Some(val) => val,
                     // finish when frontier is empty
-                    None => break
+                    None => break,
                 };
                 for (hex_x, hex_y) in hexmap.field[current].get_neighbours(&hexmap) {
                     let index = hexmap.coords_to_index(hex_x, hex_y);
-                    let cost = costs[current][plate_num].unwrap() + get_cost(&noise[current], &noise[index]);
+                    let cost = costs[current][plate_num].unwrap()
+                        + get_cost(&noise[current], &noise[index]);
                     costs[index][plate_num] = match costs[index][plate_num] {
-                        Some(val) if cost >= val => {
-                            continue
-                        },
+                        Some(val) if cost >= val => continue,
                         _ => {
                             frontier.push_back(index);
                             Some(cost)
@@ -167,7 +171,7 @@ impl Geo {
                 let current = match frontier.pop_front() {
                     Some(val) => val,
                     // finish when frontier is empty
-                    None => break
+                    None => break,
                 };
                 for (hex_x, hex_y) in hexmap.field[current].get_neighbours(&hexmap) {
                     let index = hexmap.coords_to_index(hex_x, hex_y);
@@ -213,8 +217,8 @@ impl Geo {
             for (index, hex) in hexmap.field.iter_mut().enumerate() {
                 // skip non-placeholder tiles
                 match hex.terrain_type {
-                    HexType::WATER => {},
-                    _ => continue
+                    HexType::WATER => {}
+                    _ => continue,
                 };
                 neighbours = vec![0; self.num_plates as usize];
                 // check neighbour types
@@ -251,8 +255,8 @@ impl Geo {
         }
         debug_println!("plates filled");
         // now return generated values
-        let mut indices: Vec<(usize, usize)> = vec!();
-        let mut directions: Vec<(f32, f32)> = vec!();
+        let mut indices: Vec<(usize, usize)> = vec![];
+        let mut directions: Vec<(f32, f32)> = vec![];
         for i in 0..self.num_plates as usize {
             if plate_stats[i] != 0 {
                 let mut dir: (f32, f32) = (rng.gen_range(-1.0, 1.0), rng.gen_range(-1.0, 1.0));
@@ -267,10 +271,11 @@ impl Geo {
                 }
             }
         }
-        indices.sort_unstable_by(|a, b| {
-            (a.0).cmp(&b.0)
-        });
-        Plates{indices, directions}
+        indices.sort_unstable_by(|a, b| (a.0).cmp(&b.0));
+        Plates {
+            indices,
+            directions,
+        }
     }
 
     fn generate_height(&self, hexmap: &mut HexMap, plates: &Plates) -> Vec<f32> {
@@ -278,13 +283,17 @@ impl Geo {
             let dir = plates.directions[plates.indices[index].1];
             hex.terrain_type = HexType::DEBUG_2D((dir.0 * 0.5 + 0.5, dir.1 * 0.5 + 0.5));
         }
-        vec!()
+        vec![]
     }
 }
 
 impl Default for Geo {
     fn default() -> Geo {
-        Geo{seed: 0, using_seed: false, num_plates: 30}
+        Geo {
+            seed: 0,
+            using_seed: false,
+            num_plates: 30,
+        }
     }
 }
 
