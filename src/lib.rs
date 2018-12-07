@@ -1,7 +1,7 @@
 //!Hexagonal map generator and renderer written in Rust.
 //! 
 //!## Basic usage
-//!```rust
+//!```no_run
 //!use enigmap::{
 //!    prelude::*,
 //!    generators::Islands,

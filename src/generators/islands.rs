@@ -26,18 +26,18 @@ impl Islands {
             
             // make sure ice is certain to appear
             if hex.y == 0 || hex.y == (hex_map.size_y as i32 - 1) {
-                hex.terrain_type = HexType::ICE;
+                hex.terrain_type = HexType::Ice;
             }
             // ice noise on top and bottom
             let noisy_dst_to_edge = dst_to_edge + (worley_val * 0.03) as f32;
             if noisy_dst_to_edge < 0.12 {
-                hex.terrain_type = HexType::ICE;
+                hex.terrain_type = HexType::Ice;
             }
         }
         // clear up ice by removing some isalnds of ice and water
         for _ in 0..2 {
-            self.clear_pass(hex_map, HexType::WATER, HexType::ICE, 3);
-            self.clear_pass(hex_map, HexType::ICE, HexType::WATER, 3);
+            self.clear_pass(hex_map, HexType::Water, HexType::Ice, 3);
+            self.clear_pass(hex_map, HexType::Ice, HexType::Water, 3);
         }
     }
 
@@ -48,16 +48,16 @@ impl Islands {
     {
         // generate and clear up small islands
         for hex in &mut hex_map.field {
-            if let HexType::WATER = hex.terrain_type {
+            if let HexType::Water = hex.terrain_type {
                 let noise_val = gen.get([hex.center_x as f64 * noise_scale + seed as f64, hex.center_y as f64 * noise_scale]);
                 if noise_val > 0.36 {
-                    hex.terrain_type = HexType::FIELD;
+                    hex.terrain_type = HexType::Field;
                 }
             }
         }
         for _ in 0..3 {
-            self.clear_pass(hex_map, HexType::FIELD, HexType::WATER, 3);
-            self.clear_pass(hex_map, HexType::WATER, HexType::FIELD, 3);
+            self.clear_pass(hex_map, HexType::Field, HexType::Water, 3);
+            self.clear_pass(hex_map, HexType::Water, HexType::Field, 3);
         }
 
         // create bigger landmasses
@@ -89,7 +89,7 @@ impl Islands {
             for hex in &mut hex_map.field {
                 // skip tiles that aren't water
                 match hex.terrain_type {
-                    HexType::WATER => {},
+                    HexType::Water => {},
                     _ => continue
                 };
                 let noise_val = gen.get([hex.center_x as f64 * noise_scale + seed as f64, hex.center_y as f64 * noise_scale]);
@@ -99,7 +99,7 @@ impl Islands {
                 let center_dst = ((hex.center_x - center_focus.0).powi(2) + (hex.center_y - center_focus.1).powi(2)).sqrt() * 0.6;
                 let elipse_dst = f32::min(center_dst, f32::min(first_dst, second_dst)) / hex_map.absolute_size_x * 100.0;
                 if (noise_val as f32 * 3.0 + elipse_dst) < 4.0 {
-                    hex.terrain_type = HexType::FIELD;
+                    hex.terrain_type = HexType::Field;
                 }
             }
         }
@@ -114,9 +114,9 @@ impl Islands {
         for hex in &mut hex_map.field {
             // skip everything thats not land and generate mountains
             match hex.terrain_type {
-                HexType::FIELD => {
+                HexType::Field => {
                     if rng.gen::<f32>() < 0.04 {
-                        hex.terrain_type = HexType::MOUNTAIN;
+                        hex.terrain_type = HexType::Mountain;
                         continue;
                     }
                 }, 
@@ -127,13 +127,13 @@ impl Islands {
             let noise_val = gen.get([hex.center_x as f64 * noise_scale + seed as f64, hex.center_y as f64 * noise_scale]);
             let temperature = 70.0 * dst_to_edge - 20.0 + noise_val as f32 * 5.0;
             hex.terrain_type = if temperature < -5.0 {
-                HexType::TUNDRA
+                HexType::Tundra
             } else if temperature > -5.0 && temperature < 25.0 && noise_val > -0.6 {
-                HexType::FOREST
+                HexType::Forest
             } else if temperature > 35.0 && noise_val > -0.6 {
-                HexType::DESERT
+                HexType::Desert
             } else {
-                HexType::FIELD
+                HexType::Field
             };
         }
 
@@ -152,7 +152,7 @@ impl Islands {
         for (index, hex) in hex_map.field.iter_mut().enumerate() {
             // skip not deserts
             match hex.terrain_type {
-                HexType::DESERT => {},
+                HexType::Desert => {},
                 _ => continue
             }
             let (x_wind, y_wind) = wind_field[index];
@@ -172,25 +172,25 @@ impl Islands {
                 }
             }
             match old_field[target_hex_index].terrain_type {
-                HexType::WATER | HexType::OCEAN => {
-                    hex.terrain_type = HexType::JUNGLE;
+                HexType::Water | HexType::Ocean => {
+                    hex.terrain_type = HexType::Jungle;
                 },
                 _ => {}
             } 
             /* debug wind direction
             if x_wind > 0.0 && y_wind > 0.0 {
-                hex.terrain_type = HexType::WATER;
+                hex.terrain_type = HexType::Water;
             } else if x_wind < 0.0 && y_wind > 0.0 {
-                hex.terrain_type = HexType::FIELD;
+                hex.terrain_type = HexType::Field;
             } else if x_wind > 0.0 && y_wind < 0.0 {
-                hex.terrain_type = HexType::ICE;
+                hex.terrain_type = HexType::Ice;
             } else {
-                hex.terrain_type = HexType::DESERT;
+                hex.terrain_type = HexType::Desert;
             }*/
         }
     }
 
-    /// Generates oceans by changing `HexType::WATER` tiles into `HexType::OCEAN`
+    /// Generates oceans by changing `HexType::Water` tiles into `HexType::Ocean`
     /// 
     /// Uses same generator as land pass for better ocean generation
     fn ocean_pass<T>(&self, hex_map: &mut HexMap, gen: &T, noise_scale: f64, seed: u32)
@@ -199,14 +199,14 @@ impl Islands {
         let mut old_field: Vec<Hex> = Vec::new();
         for hex in &mut hex_map.field {
             match hex.terrain_type {
-                HexType::WATER | HexType::ICE | HexType::OCEAN => continue,
+                HexType::Water | HexType::Ice | HexType::Ocean => continue,
                 _ => old_field.push(hex.clone())
             };
         }
         for hex in &mut hex_map.field {
             // skip everything thats not water
             match hex.terrain_type {
-                HexType::WATER => {}, 
+                HexType::Water => {}, 
                 _ => continue
             };
             let mut dst_to_land = i32::max_value();
@@ -220,15 +220,15 @@ impl Islands {
             }
             // spawn oceans
             if dst_to_land > 5 || noise_val < 0.14 {
-                hex.terrain_type = HexType::OCEAN;
+                hex.terrain_type = HexType::Ocean;
             }
             // make sure we have at least one tile
             if dst_to_land < 2 {
-                hex.terrain_type = HexType::WATER;
+                hex.terrain_type = HexType::Water;
             }
         }
         //clear that up a little bit
-        self.clear_pass(hex_map, HexType::OCEAN, HexType::WATER, 3);
+        self.clear_pass(hex_map, HexType::Ocean, HexType::Water, 3);
     }
 
     /// Changes type of hexes with neighbours with different type than itself

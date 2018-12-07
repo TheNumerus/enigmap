@@ -4,11 +4,7 @@ version = "0.1.0"
 authors = ["Petr Volf <Petr.volf216@gmail.com>"]
 edition = "2018"
 
-[features]
-default = []
-
 [dependencies]
-serde = {version = "1.0.79", optional = true, features = ["derive"]}
 image = "0.20.0"
 rand = "0.5.5"
 noise = "0.5.1"

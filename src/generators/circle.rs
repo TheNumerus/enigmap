@@ -41,25 +41,25 @@ impl MapGen for Circle {
 
             // circular land
             if (dst_to_center_x + dst_to_center_y).sqrt() < (self.ring_size + p.get([hex.center_x as f64 * 0.1 + seed as f64, hex.center_y as f64 * 0.1]) as f32 * 5.0) {
-                hex.terrain_type = HexType::FIELD;
+                hex.terrain_type = HexType::Field;
             }
 
             // random mountains
-            if let HexType::FIELD = hex.terrain_type {
+            if let HexType::Field = hex.terrain_type {
                 if random::<f32>() < self.mountain_percentage {
-                    hex.terrain_type = HexType::MOUNTAIN;
+                    hex.terrain_type = HexType::Mountain;
                 }
             }
 
             // ice on top and bottom
             if dst_to_edge < self.ice_falloff {
-                hex.terrain_type = HexType::ICE;
+                hex.terrain_type = HexType::Ice;
             }
 
             // forests
-            if let HexType::FIELD = hex.terrain_type {
+            if let HexType::Field = hex.terrain_type {
                 if (noise_val - (rel_dst_to_edge  -0.6) * 0.8) > 0.0 {
-                    hex.terrain_type = HexType::FOREST;
+                    hex.terrain_type = HexType::Forest;
                 }
             }    
         }
@@ -69,13 +69,13 @@ impl MapGen for Circle {
         for hex in &mut hex_map.field {
             // skip everything thats not water
             match hex.terrain_type {
-                HexType::WATER => {}, 
+                HexType::Water => {}, 
                 _ => continue
             };
             let mut dst_to_land = i32::max_value();
             for other in &old_field {
                 match other.terrain_type {
-                    HexType::WATER | HexType::ICE | HexType::OCEAN => {},
+                    HexType::Water | HexType::Ice | HexType::Ocean => {},
                     _ => {
                         let dst = hex.distance_to(&other);
                         if dst < dst_to_land {
@@ -85,7 +85,7 @@ impl MapGen for Circle {
                 };
             }
             if dst_to_land > self.ocean_distance {
-                hex.terrain_type = HexType::OCEAN;
+                hex.terrain_type = HexType::Ocean;
             }
         }
     }

@@ -37,7 +37,7 @@ fn main() {
 
     bencher(| | {
         img = renderer.render(&hexmap);
-    }, "Rendering", 10);
+    }, "Rendering", 1);
 
     // create folder for image if needed
     let path = "./out";

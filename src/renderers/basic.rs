@@ -64,15 +64,15 @@ impl Basic {
         // color them
         for pixel in &pixels {
             let mut color = match hex.terrain_type {
-                HexType::WATER => Rgb([74, 128, 214]),
-                HexType::FIELD => Rgb([116, 191, 84]),
-                HexType::ICE => Rgb([202, 208, 209]),
-                HexType::MOUNTAIN => Rgb([77, 81, 81]),
-                HexType::FOREST => Rgb([86, 161, 54]),
-                HexType::OCEAN => Rgb([54, 108, 194]),
-                HexType::TUNDRA => Rgb([62, 81, 77]),
-                HexType::DESERT => Rgb([214, 200, 109]),
-                HexType::JUNGLE => Rgb([64, 163, 16]),
+                HexType::Water => Rgb([74, 128, 214]),
+                HexType::Field => Rgb([116, 191, 84]),
+                HexType::Ice => Rgb([202, 208, 209]),
+                HexType::Mountain => Rgb([77, 81, 81]),
+                HexType::Forest => Rgb([86, 161, 54]),
+                HexType::Ocean => Rgb([54, 108, 194]),
+                HexType::Tundra => Rgb([62, 81, 77]),
+                HexType::Desert => Rgb([214, 200, 109]),
+                HexType::Jungle => Rgb([64, 163, 16]),
                 _ => Rgb([0, 0, 0])
             };
             for i in 0..3 {

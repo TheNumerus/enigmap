@@ -62,4 +62,14 @@ impl HexMap {
         let pos = i as i32 - line * self.size_x as i32 - (line / 2);
         (pos, line)
     }
+
+    /// Returns total area of hexmap
+    pub fn get_area(&self) -> u32 {
+        self.size_x * self.size_y
+    }
+
+    /// Returns avg size
+    pub fn get_avg_size(&self) -> u32 {
+        (self.size_x + self.size_y) / 2
+    }
 }

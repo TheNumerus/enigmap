@@ -72,21 +72,21 @@ impl Renderer for OGL {
             let data = map.field.iter().map(|hex| {
                 let color_diff = rng.gen_range(0.98, 1.02);
                 let mut color = match hex.terrain_type {
-                    HexType::WATER => (0.29, 0.5, 0.84),
-                    HexType::FIELD => (0.45, 0.75, 0.33),
-                    HexType::ICE => (0.79, 0.82, 0.82),
-                    HexType::MOUNTAIN => (0.3, 0.3, 0.3),
-                    HexType::FOREST => (0.38, 0.6, 0.2),
-                    HexType::OCEAN => (0.23, 0.45, 0.8),
-                    HexType::TUNDRA => (0.3, 0.4, 0.38),
-                    HexType::DESERT => (0.85, 0.83, 0.70),
-                    HexType::JUNGLE => (0.34, 0.65, 0.1),
-                    HexType::IMPASSABLE => (0.15, 0.15, 0.15),
-                    HexType::DEBUG(val) => (val, val, val),
-                    HexType::DEBUG_2D((val_x , val_y)) => (val_x, val_y , 0.0),
+                    HexType::Water => (0.29, 0.5, 0.84),
+                    HexType::Field => (0.45, 0.75, 0.33),
+                    HexType::Ice => (0.79, 0.82, 0.82),
+                    HexType::Mountain => (0.3, 0.3, 0.3),
+                    HexType::Forest => (0.38, 0.6, 0.2),
+                    HexType::Ocean => (0.23, 0.45, 0.8),
+                    HexType::Tundra => (0.3, 0.4, 0.38),
+                    HexType::Desert => (0.85, 0.83, 0.70),
+                    HexType::Jungle => (0.34, 0.65, 0.1),
+                    HexType::Impassable => (0.15, 0.15, 0.15),
+                    HexType::Debug(val) => (val, val, val),
+                    HexType::Debug2d((val_x , val_y)) => (val_x, val_y , 0.0),
                 };
                 match hex.terrain_type {
-                    HexType::DEBUG(_) | HexType::DEBUG_2D(_) => {},
+                    HexType::Debug(_) | HexType::Debug2d(_) => {},
                     _ => {
                         color.0 *= color_diff;
                         color.1 *= color_diff;
