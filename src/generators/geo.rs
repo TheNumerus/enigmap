@@ -1,5 +1,5 @@
 use rand::prelude::*;
-use rand::rngs::StdRng;
+use rand::Rng;
 use noise::{Fbm, NoiseFn};
 use std::collections::VecDeque;
 use std::f32;
@@ -13,7 +13,11 @@ pub struct Geo {
     seed: u32,
     using_seed: bool,
     /// number of tectonic plates to generate
-    pub num_plates: u32
+    pub num_plates: u32,
+    // number of particle iterations to use
+    pub particle_iterations: u32,
+    // density of particles when generating height, (affects accuracy)
+    pub particle_grid_density: u32,
 }
 
 impl Geo {
@@ -273,7 +277,7 @@ impl Geo {
         Plates{indices, directions}
     }
 
-    fn generate_height(&self, hexmap: &mut HexMap, plates: &Plates) -> Vec<f32> {
+    fn generate_height(&self, hexmap: &mut HexMap, plates: &Plates, seed: u32) -> Vec<f32> {
         let radius = (0.06 * hexmap.get_avg_size() as f32) as u32;
         //let old_map = hexmap.clone();
         let mut pressures: Vec<(f32, f32)> = Vec::with_capacity(hexmap.get_area() as usize);
@@ -306,22 +310,21 @@ impl Geo {
             divergence /= search_area.len() as f32;
             divergences.push(divergence);
         }
-        /*for (index, hex) in hexmap.field.iter_mut().enumerate() {
-            let pressure_len = (pressures[index].0 * pressures[index].0 + pressures[index].1 * pressures[index].1).sqrt();
-            let inverted_pressure_len = max_pressure_len - pressure_len;
-            let pressure_norm = (pressures[index].0 * inverted_pressure_len / max_pressure_len, pressures[index].1 * inverted_pressure_len / max_pressure_len);
-
-            hex.terrain_type = HexType::Debug(divergences[index] * 0.5 - 0.5);
-            //hex.terrain_type = HexType::Debug2d((pressure_norm.0 * 0.5 + 0.5, pressure_norm.1 * 0.5 + 0.5));
-        }*/
         // generate particles and move them around a bit in the vector field
-        let mut particles: Vec<(f32, f32)> = hexmap.field.iter().map(|hex| Geo::hex_particles(hex)).flatten().collect();
+        let mut particles: Vec<(f32, f32)> = vec!();
+        let grid = self.particle_grid_density as i32;
+        for x in 0..hexmap.size_x as i32 * grid {
+            for y in -20..(hexmap.size_y as i32 * grid + 20) {
+                particles.push((x as f32 / grid as f32, y as f32 / grid as f32));
+            }
+        }
+        let mut rng = StdRng::from_seed(Geo::seed_to_rng_seed(seed));
 
-        for _ in 0..5 {
-            let mut momentums: Vec<(f32, f32)> = vec![(0.0, 0.0); hexmap.get_area() as usize * 6];
+        for _ in 0..self.particle_iterations {
+            let mut momentums: Vec<(f32, f32)> = vec![(0.0, 0.0); particles.len()];
 
             for (index, particle) in particles.iter().enumerate() {
-                let pressure = Geo::get_pressure(particle.0, particle.1, &pressures, &particles, hexmap);
+                let pressure = Geo::get_pressure(particle.0, particle.1, &pressures, hexmap, &mut rng);
                 momentums[index].0 = pressure.0;
                 momentums[index].1 = pressure.1;
             }
@@ -334,6 +337,7 @@ impl Geo {
         }
         // now collect particles
         let mut counts: Vec<u32> = vec![0; hexmap.get_area() as usize];
+        let mut max_counts = 0;
         for particle in &particles {
             // skip particles out of bounds
             if Geo::is_particle_oob(particle.0, particle.1, hexmap.size_y) {
@@ -349,14 +353,17 @@ impl Geo {
                 }
             }
             counts[closest_index] += 1;
+            if counts[closest_index] > max_counts {
+                max_counts = counts[closest_index];
+            }
         }
         for (index, hex) in hexmap.field.iter_mut().enumerate() {
-            hex.terrain_type = HexType::Debug(counts[index] as f32 / 12.0);
+            hex.terrain_type = HexType::Debug(counts[index] as f32 / max_counts as f32);
         }
         vec!()
     }
 
-    fn hex_particles(hex: &Hex) -> Vec<(f32, f32)> {
+    /*fn hex_particles(hex: &Hex) -> Vec<(f32, f32)> {
         let mut particles: Vec<(f32, f32)> = Vec::with_capacity(6);
         const THIRD: f32 = 1.0/3.0;
         const SIXTH: f32 = 1.0/6.0;
@@ -372,9 +379,11 @@ impl Geo {
             *y += hex.center_y;
         }
         particles
-    }
+    }*/
 
-    fn get_pressure(x: f32, y: f32, pressures: &Vec<(f32, f32)>, particles: &Vec<(f32, f32)>, hexmap: &HexMap) -> (f32, f32) {
+    fn get_pressure<T>(x: f32, y: f32, pressures: &Vec<(f32, f32)>, hexmap: &HexMap, rng: &mut T) -> (f32, f32)
+        where T: Rng
+    {
         // find closest hex
         let mut closest_index = 0;
         let mut min_dst = f32::MAX;
@@ -389,7 +398,7 @@ impl Geo {
                 break
             }
         }
-        pressures[closest_index]
+        (pressures[closest_index].0 * rng.gen_range(0.9, 1.1), pressures[closest_index].1 * rng.gen_range(0.9, 1.1))
     }
 
     fn is_particle_oob(x: f32, y: f32, size_y: u32) -> bool {
@@ -397,8 +406,21 @@ impl Geo {
         let norm_x = x.fract();
         if norm_x < 0.5 && y < (norm_x * RATIO/2.0 + RATIO/ 4.0) {
             return true
-        } else if norm_x < 0.5 && y < (-norm_x * RATIO/2.0 + RATIO/ 4.0) {
+        } else if norm_x > 0.5 && y < (-norm_x * RATIO/2.0 + RATIO/ 4.0) {
             return true
+        }
+        if size_y % 2 == 0 {
+            if norm_x > 0.5 && y > ((norm_x + size_y as f32 * 1.5) / (RATIO * 1.5) - (RATIO / 4.0)) {
+                return true
+            } else if norm_x < 0.5 && y > ((-norm_x + size_y as f32 * 1.5) / (RATIO * 1.5) + (RATIO / 4.0)) {
+                return true
+            }
+        } else {
+            if norm_x < 0.5 && y > (norm_x + size_y as f32 * 1.5) / (RATIO * 1.5) {
+                return true
+            } else if norm_x > 0.5 && y > (((-norm_x + size_y as f32 * 1.5) / (RATIO * 1.5)) + RATIO / 2.0) {
+                return true
+            }
         }
         // TODO: check bottom
         false
@@ -407,52 +429,44 @@ impl Geo {
     fn particle_wrap(x: f32, y: f32, size_x: u32) -> f32 {
         let hex_and_side = y / (1.5 * RATIO);
         let norm_y = hex_and_side.fract() * (1.5 * RATIO);
+        let mut new_x = x;
         // areas
         // 1   /
         // 2  │
         // 3   \
         // 4   │
-        return if norm_y <= (RATIO / 4.0) {
+        if norm_y <= (RATIO / 4.0) {
             if -x + 0.5 > 1.5 * RATIO * norm_y {
-                x + size_x as f32
+                new_x += size_x as f32;
             } else if -x + size_x as f32 + 0.5 < 1.5 * RATIO * norm_y {
-                x - size_x as f32
-            } else {
-                x
+                new_x -= size_x as f32;
             }
         } else if norm_y > (RATIO / 4.0) && norm_y <= (3.0 * RATIO / 4.0) {
             if x < 0.0 {
-                x + size_x as f32
+                new_x += size_x as f32;
             } else if x > (size_x as f32) {
-                x - size_x as f32
-            } else {
-                x
+                new_x -= size_x as f32;
             }
         } else if norm_y > (3.0 * RATIO / 4.0) && norm_y <= RATIO {
             if x + 1.5 < 1.5 * RATIO * norm_y {
-                x + size_x as f32
+                new_x += size_x as f32;
             } else if x - size_x as f32 + 1.5 > 1.5 * RATIO * norm_y {
-                x - size_x as f32
-            } else {
-                x
+                new_x -= size_x as f32;
             }
         } else if norm_y >= RATIO {
             if x < 0.5 {
-                x + size_x as f32
+                new_x += size_x as f32;
             } else if x > (size_x as f32 + 0.5) {
-                x - size_x as f32
-            } else {
-                x
+                new_x -= size_x as f32;
             }
-        } else {
-            x
         }
+        new_x
     }
 }
 
 impl Default for Geo {
     fn default() -> Geo {
-        Geo{seed: 0, using_seed: false, num_plates: 30}
+        Geo{seed: 0, using_seed: false, num_plates: 30, particle_grid_density: 7, particle_iterations: 6}
     }
 }
 
@@ -465,7 +479,7 @@ impl MapGen for Geo {
 
         let plates = self.generate_plates(hex_map, seed);
         debug_println!("plates done");
-        let _heights = self.generate_height(hex_map, &plates);
+        let _heights = self.generate_height(hex_map, &plates, seed);
     }
 
     fn set_seed(&mut self, seed: u32) {
@@ -492,6 +506,16 @@ mod tests {
         assert_eq!(true, Geo::is_particle_oob(1.0, 0.2, 2));
         assert_eq!(false, Geo::is_particle_oob(0.0, 1.0, 7));
         assert_eq!(false, Geo::is_particle_oob(0.5, 0.5, 8));
+
+        // test bottom
+        assert_eq!(true, Geo::is_particle_oob(1.573, 3.526, 4));
+        assert_eq!(true, Geo::is_particle_oob(2.2, 3.668, 4));
+        assert_eq!(true, Geo::is_particle_oob(2.0301, 4.3526, 5));
+        assert_eq!(true, Geo::is_particle_oob(2.8279, 4.4536, 5));
+        assert_eq!(false, Geo::is_particle_oob(1.917, 3.684, 4));
+        assert_eq!(false, Geo::is_particle_oob(2.396, 3.514, 4));
+        assert_eq!(false, Geo::is_particle_oob(2.3679, 4.5228, 5));
+        assert_eq!(false, Geo::is_particle_oob(2.8891, 4.3792, 5));
     }
     #[test]
     fn geo_particle_wrap() {
