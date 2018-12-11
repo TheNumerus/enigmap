@@ -1,5 +1,6 @@
+use std::f32;
 use crate::hex::{RATIO, Hex};
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+
 #[derive(Debug, Clone)]
 /// Base data structure for generated map
 pub struct HexMap {
@@ -71,5 +72,28 @@ impl HexMap {
     /// Returns avg size
     pub fn get_avg_size(&self) -> u32 {
         (self.size_x + self.size_y) / 2
+    }
+
+    /// Returns index of hex which center is closest to given coordinates
+    pub fn get_closest_hex_index(&self, x: f32, y: f32) -> usize {
+        let mut closest_index = 0;
+        let mut min_dst = f32::MAX;
+        for (index, hex) in self.field.iter().enumerate() {
+            let dst = ((hex.center_x - x).powi(2) + (hex.center_y - y).powi(2)).sqrt();
+            if min_dst > dst {
+                min_dst = dst;
+                closest_index = index;
+            }
+            if dst < 0.5 {
+                break
+            }
+        }
+        closest_index
+    }
+
+    /// Returns index of wrapped hex which center is closest to given coordinates
+    pub fn get_closest_hex_index_wrapped(&self, x: f32, y: f32) -> usize {
+        // TODO
+        self.get_closest_hex_index(x,y)
     }
 }

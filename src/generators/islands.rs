@@ -262,9 +262,10 @@ impl MapGen for Islands {
         let w = Worley::new();
         let f = Fbm::new();
         let p = Perlin::new();
-        let seed = match self.using_seed {
-            false => random::<u32>(),
-            true => self.seed,
+        let seed = if self.using_seed {
+            self.seed
+        } else {
+            random::<u32>()
         };
 
         debug_println!("seed: {:?}", seed);

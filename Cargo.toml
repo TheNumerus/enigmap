@@ -16,3 +16,7 @@ criterion = "0.2"
 [[bench]]
 name = "generators"
 harness = false
+
+[[bench]]
+name = "hexmap"
+harness = false
