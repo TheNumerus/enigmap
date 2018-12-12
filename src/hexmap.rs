@@ -26,8 +26,8 @@ impl HexMap {
     /// Creates new `Hexmap` based on dimensions with all `Hex` tiles populated and with correct coordinates
     pub fn new(size_x: u32, size_y: u32) -> HexMap {
         let field: Vec<Hex> = Vec::with_capacity((size_x * size_y) as usize);
-        let absolute_size_x = size_x as f32 + 0.7;
-        let absolute_size_y = RATIO + 0.3 + (size_y as f32 - 1.0) * RATIO * 3.0 / 4.0;
+        let absolute_size_x = size_x as f32 + 0.5;
+        let absolute_size_y = RATIO + (size_y as f32 - 1.0) * RATIO * 3.0 / 4.0;
 
         let mut map = HexMap{size_x, size_y, field, absolute_size_x, absolute_size_y};
         for i in 0..(size_x * size_y) {
@@ -76,13 +76,17 @@ impl HexMap {
 
     /// Returns index of hex which center is closest to given coordinates
     pub fn get_closest_hex_index(&self, x: f32, y: f32) -> usize {
+        // precalculate Y
+        let y_guess = (RATIO * y - RATIO * RATIO).max(0.0).min(self.size_y as f32 - 1.0) as usize;
+        let y_guess_index = y_guess * self.size_x as usize;
+        let x_guess = x.max(0.0).min(self.absolute_size_x - 1.0) as usize;
         let mut closest_index = 0;
         let mut min_dst = f32::MAX;
-        for (index, hex) in self.field.iter().enumerate() {
+        for (index, hex) in self.field[(y_guess_index + x_guess)..].iter().enumerate() {
             let dst = ((hex.center_x - x).powi(2) + (hex.center_y - y).powi(2)).sqrt();
             if min_dst > dst {
                 min_dst = dst;
-                closest_index = index;
+                closest_index = index + y_guess_index + x_guess;
             }
             if dst < 0.5 {
                 break
@@ -95,5 +99,17 @@ impl HexMap {
     pub fn get_closest_hex_index_wrapped(&self, x: f32, y: f32) -> usize {
         // TODO
         self.get_closest_hex_index(x,y)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn closest_hex() {
+        let hexmap = HexMap::new(4, 4);
+        assert_eq!(8, hexmap.get_closest_hex_index(0.6, 1.8));
+        assert_eq!(4, hexmap.get_closest_hex_index(0.63, 1.8));
     }
 }

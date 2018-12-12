@@ -280,8 +280,9 @@ impl Geo {
         // generate particles and move them around a bit in the vector field
         let mut particles: Vec<(f32, f32)> = vec!();
         let grid = self.particle_grid_density as i32;
+        let offset = 40;
         for x in 0..hexmap.size_x as i32 * grid {
-            for y in -20..(hexmap.size_y as i32 * grid + 20) {
+            for y in -offset..(hexmap.size_y as i32 * grid + offset) {
                 particles.push((x as f32 / grid as f32, y as f32 / grid as f32));
             }
         }
@@ -310,11 +311,54 @@ impl Geo {
                 max_counts = counts[closest_index];
             }
         }
-        for (index, hex) in hexmap.field.iter_mut().enumerate() {
-            hex.terrain_type = HexType::Debug(counts[index] as f32 / max_counts as f32);
+        // denoise results
+        let mut counts_denoised: Vec<f32> = vec![0.0; hexmap.get_area() as usize];
+        for (index, count_denoised) in counts_denoised.iter_mut().enumerate() {
+            let mut c = 0.0;
+            let coords = hexmap.index_to_coords(index as u32);
+            let search_area = Hex::from_coords(coords.0, coords.1).get_spiral(hexmap, 1);
+            for (hex_x, hex_y) in &search_area {
+                let index = hexmap.coords_to_index(*hex_x, *hex_y);
+                let count = counts[index];
+                c += count as f32;
+            }
+            c /= search_area.len() as f32;
+            *count_denoised = c;
         }
+        /*for (index, hex) in hexmap.field.iter_mut().enumerate() {
+            hex.terrain_type = HexType::Debug(counts[index] as f32 / max_counts as f32);
+        }*/
         // assign height to plates, then add pressure, then erode
-        let heights: Vec<f32> = vec![0.0; hexmap.get_area() as usize];
+        let mut heights: Vec<f32> = vec![0.0; hexmap.get_area() as usize];
+        let plate_heights: Vec<f32> = (0..plates.directions.len()).map(|_| rng.gen_range(0.0, 1.0)).collect();
+
+        // asign heights
+        for (index, height) in heights.iter_mut().enumerate() {
+            let plate_height = plate_heights[(plates.indices[index].1)];
+            *height += 0.45 + plate_height * 0.5;
+        }
+
+        // erode them
+        let heights_copy = heights.clone();
+        for (index, height) in heights.iter_mut().enumerate() {
+            let coords = hexmap.index_to_coords(index as u32);
+            let search_area = Hex::from_coords(coords.0, coords.1).get_spiral(hexmap, rng.gen_range(radius as f32 * 0.5, radius as f32 * 1.0) as u32);
+            let mut height_avg = 0.0;
+            for (hex_x, hex_y) in &search_area {
+                let index = hexmap.coords_to_index(*hex_x, *hex_y);
+                height_avg += heights_copy[index];
+            }
+            height_avg /= search_area.len() as f32;
+            *height = height_avg;
+        }
+
+        // add pressure
+        for (index, height) in heights.iter_mut().enumerate() {
+            let press_height = counts_denoised[index] / max_counts as f32;
+            let press_strength = 0.45;
+            *height *= press_height * 2.0 * press_strength + 1.0 - press_strength;
+        }
+
         heights
     }
 
@@ -371,6 +415,34 @@ impl Geo {
         }
         new_x
     }
+
+    fn generate_land(&self, hexmap: &mut HexMap, heights: &[f32], _seed: u32) {
+        
+        const DEBUG: bool = false;
+
+        // compute land percentile
+        let mut heights_sorted: Vec<f32> = heights.to_owned();
+        heights_sorted.sort_unstable_by( |a, b| (a).partial_cmp(b).unwrap());
+        let land_threshold = heights_sorted[(heights_sorted.len() as f32 * 0.72) as usize];
+        let ocean_threshold = heights_sorted[(heights_sorted.len() as f32 * 0.5) as usize];
+        let mountain_threshold = heights_sorted[(heights_sorted.len() as f32 * 0.97) as usize];
+
+        for (index, hex) in hexmap.field.iter_mut().enumerate() {
+            if DEBUG {
+                hex.terrain_type = HexType::Debug(heights[index]);
+                continue;
+            }
+            if heights[index] < ocean_threshold {
+                hex.terrain_type = HexType::Ocean;
+            } else if heights[index] < land_threshold && heights[index] >= ocean_threshold {
+                hex.terrain_type = HexType::Water;
+            } else if heights[index] > mountain_threshold {
+                hex.terrain_type = HexType::Mountain;
+            } else {
+                hex.terrain_type = HexType::Field;
+            }
+        }
+    }
 }
 
 impl Default for Geo {
@@ -380,16 +452,19 @@ impl Default for Geo {
 }
 
 impl MapGen for Geo {
-    fn generate(&self, hex_map: &mut HexMap) {
+    fn generate(&self, hexmap: &mut HexMap) {
         let seed = if self.using_seed {
             self.seed
         } else {
             random::<u32>()
         };
 
-        let plates = self.generate_plates(hex_map, seed);
+        let plates = self.generate_plates(hexmap, seed);
         debug_println!("plates done");
-        let _heights = self.generate_height(hex_map, &plates, seed);
+        let heights = self.generate_height(hexmap, &plates, seed);
+        debug_println!("heights done");
+        self.generate_land(hexmap, &heights, seed);
+        debug_println!("land done");
     }
 
     fn set_seed(&mut self, seed: u32) {

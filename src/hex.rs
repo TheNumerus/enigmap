@@ -27,10 +27,10 @@ impl Hex {
     /// Creates new `Hex` from specific coordinates with default `terrain_type`
     pub fn from_coords(x: i32, y: i32) -> Hex {
         let center_x = (x as f32) + (y/2) as f32 + match y % 2 {
-            0 => 0.6,
-            1 | _ => 1.1,
+            0 => 0.5,
+            1 | _ => 1.0,
         };
-        let center_y =  (y as f32 * RATIO * 3.0 / 4.0) + RATIO / 2.0 + 0.1;
+        let center_y =  (y as f32 * RATIO * 3.0 / 4.0) + RATIO / 2.0;
         Hex{x, y, terrain_type: HexType::Water, center_x, center_y}    
     }
 
@@ -127,7 +127,7 @@ impl Hex {
 
  impl Default for Hex {
     fn default() -> Self {
-        Hex{x:0, y: 0, terrain_type: HexType::Water, center_x: 0.5, center_y: RATIO / 2.0 + 0.1}
+        Hex{x:0, y: 0, terrain_type: HexType::Water, center_x: 0.5, center_y: RATIO / 2.0}
     }
 }
 
