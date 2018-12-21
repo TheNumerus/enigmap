@@ -46,7 +46,7 @@ impl Geo {
         // generate centers of plates
         for plate_num in 0..self.num_plates {
             let point_x = rng.gen_range(0.0, hexmap.absolute_size_x);
-            let point_y = rng.gen_range(0.1 * hexmap.absolute_size_x, hexmap.absolute_size_x * 0.9);
+            let point_y = rng.gen_range(0.1 * hexmap.absolute_size_y, hexmap.absolute_size_y * 0.9);
             let rand_type: HexType = HexType::Debug(plate_num as f32 / self.num_plates as f32);
             let closest_index = hexmap.get_closest_hex_index(point_x, point_y);
             plates.push((closest_index, rand_type));
@@ -281,8 +281,8 @@ impl Geo {
         let mut particles: Vec<(f32, f32)> = vec!();
         let grid = self.particle_grid_density as i32;
         let offset = 40;
-        for x in 0..hexmap.size_x as i32 * grid {
-            for y in -offset..(hexmap.size_y as i32 * grid + offset) {
+        for x in 0..hexmap.absolute_size_x as i32 * grid {
+            for y in -offset..(hexmap.absolute_size_y as i32 * grid + offset) {
                 particles.push((x as f32 / grid as f32, y as f32 / grid as f32));
             }
         }
@@ -340,9 +340,10 @@ impl Geo {
 
         // erode them
         let heights_copy = heights.clone();
+        let radius = rng.gen_range(radius as f32 * 0.5, radius as f32 * 1.0) as u32;
         for (index, height) in heights.iter_mut().enumerate() {
             let coords = hexmap.index_to_coords(index as u32);
-            let search_area = Hex::from_coords(coords.0, coords.1).get_spiral(hexmap, rng.gen_range(radius as f32 * 0.5, radius as f32 * 1.0) as u32);
+            let search_area = Hex::from_coords(coords.0, coords.1).get_spiral(hexmap, radius);
             let mut height_avg = 0.0;
             for (hex_x, hex_y) in &search_area {
                 let index = hexmap.coords_to_index(*hex_x, *hex_y);
@@ -424,7 +425,7 @@ impl Geo {
         let mut heights_sorted: Vec<f32> = heights.to_owned();
         heights_sorted.sort_unstable_by( |a, b| (a).partial_cmp(b).unwrap());
         let land_threshold = heights_sorted[(heights_sorted.len() as f32 * 0.72) as usize];
-        let ocean_threshold = heights_sorted[(heights_sorted.len() as f32 * 0.5) as usize];
+        let ocean_threshold = heights_sorted[(heights_sorted.len() as f32 * 0.45) as usize];
         let mountain_threshold = heights_sorted[(heights_sorted.len() as f32 * 0.97) as usize];
 
         for (index, hex) in hexmap.field.iter_mut().enumerate() {
