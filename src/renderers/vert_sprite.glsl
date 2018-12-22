@@ -7,19 +7,22 @@ uniform float tile_y;
 uniform float mult;
 uniform float win_size;
 
-
 in vec2 position;
 in vec2 world_position;
-in vec3 color;
+in float color_diff;
 in vec2 tex_coords;
+in mat2x2 rotation;
 
 out vec2 v_tex_coords;
-out vec3 v_color;
+out float v_color_diff;
 
 void main() {
-    float x = ((position.x + world_position.x) * 2)/(win_size / mult) - 1 - 2 * tile_x;
-    float y = ((position.y + world_position.y) * 2)/(win_size / mult) - 1 - 2 * tile_y;
+    float half_ratio = 1.1547 / 2.0;
+    vec2 xy = vec2(position.x - 0.5, position.y - half_ratio);
+    xy *= rotation;
+    float x = ((xy.x + world_position.x + 0.5) * 2)/(win_size / mult) - 1 - 2 * tile_x;
+    float y = ((xy.y + world_position.y + half_ratio) * 2)/(win_size / mult) - 1 - 2 * tile_y;
     gl_Position = vec4(x, y, 0.0, 1.0);
-    v_color = color;
+    v_color_diff = color_diff;
     v_tex_coords = tex_coords;
 }

@@ -1,2 +1,2 @@
-random_rotation = ["Field"]
-random_color = true
+random_rotation = true
+random_color = ["Field"]

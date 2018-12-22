@@ -2,12 +2,11 @@
 
 uniform sampler2D tex;
 
-in vec3 v_color;
+in float v_color_diff;
 in vec2 v_tex_coords;
 
 out vec4 color;
 
 void main() {
-    color = texture(tex, v_tex_coords);
-    //color = vec4(pow(v_color.x, 2.2), pow(v_color.y, 2.2), pow(v_color.z, 2.2), 1.0);
+    color = texture(tex, v_tex_coords) * v_color_diff;
 }
