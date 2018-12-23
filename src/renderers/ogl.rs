@@ -172,11 +172,11 @@ impl Default for OGL {
 
 #[derive(Copy, Clone)]
 struct Vertex {
-    position: [f32; 2],
+    position: [f32; 3],
 }
 
 impl Vertex {
     pub fn from_tupple(coords: (f32, f32)) -> Vertex {
-        Vertex{position: [coords.0, coords.1]}
+        Vertex{position: [coords.0, coords.1, 0.0]}
     }
 }

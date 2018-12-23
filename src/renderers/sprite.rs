@@ -29,7 +29,8 @@ pub struct Sprite {
     texture_folder: String,
 
     random_rotation: Setting,
-    random_color: Setting
+    random_color: Setting,
+    render_in_25d: Setting,
 }
 
 impl Sprite {
@@ -40,6 +41,7 @@ impl Sprite {
         let indices = [5,4,0,3,1,2];
         for i in 0..6 {
             let vert_pos = Sprite::get_hex_vertex(hex, indices[i]);
+            let vert_pos = (vert_pos.0, vert_pos.1, 0.0);
             let tex_coords = ((vert_pos.0 - 0.5) / RATIO + 0.5, 1.0 - vert_pos.1 / RATIO);
             verts.push(Vertex::from_tupples(vert_pos, tex_coords));
         }
@@ -57,7 +59,8 @@ impl Sprite {
             wrap_map: false,
             texture_folder: folder.to_string(),
             random_color: Setting::None,
-            random_rotation: Setting::All
+            random_rotation: Setting::All,
+            render_in_25d: Setting::None
         };
         // check for path
         if !Path::new(folder).exists() {
@@ -92,6 +95,9 @@ impl Sprite {
         }
         if let Some(val) = Sprite::parse_setting("random_color", &settings) {
             renderer.random_color = val;
+        }
+        if let Some(val) = Sprite::parse_setting("render_in_25d", &settings) {
+            renderer.render_in_25d = val;
         }
         println!("{:?}", renderer);
         return renderer;
@@ -128,6 +134,26 @@ impl Sprite {
             let texture = glium::texture::Texture2d::new(display, image).unwrap();
             textures.insert(key.to_owned(), texture);
         }
+        // load cover textures
+        for key in map.keys() {
+            match &self.render_in_25d {
+                Setting::None => break,
+                Setting::All => {},
+                Setting::Some(val) => {
+                    if !val.contains(&map[key]) {
+                        continue;
+                    }
+                }
+            };
+            let image = match image::open(self.texture_folder.to_owned() + "/" + &key.to_owned() +"_cover.png") {
+                Ok(image) => image.to_rgba(),
+                Err(_err) => Self::generate_error_texture()
+            };
+            let image_dimensions = image.dimensions();
+            let image = glium::texture::RawImage2d::from_raw_rgba_reversed(&image.into_raw(), image_dimensions);
+            let texture = glium::texture::Texture2d::new(display, image).unwrap();
+            textures.insert(key.to_owned() + "_cover", texture);
+        }
 
         textures
     }
@@ -149,6 +175,51 @@ impl Sprite {
         let angle = index as f32 / 6.0 * (f32::consts::PI * 2.0);
         [[angle.cos(), angle.sin()], [-angle.sin(), angle.cos()]]
     }
+
+    fn get_cover_shape() -> Vec<Vertex> {
+        let mut verts: Vec<Vertex> = Vec::new();
+        let dummy_hex = Hex::from_coords(0,0);
+        // divide hex into 4 triangles
+        let indices = [5,4,0,3,1,2];
+        for i in 0..6 {
+            let vert_pos = Sprite::get_cover_hex_vertex(&dummy_hex, indices[i]);
+            let tex_coords = ((vert_pos.0 - 0.5) / RATIO + 0.5, 1.0 - vert_pos.1 / (2.0 * RATIO) + 0.5);
+            verts.push(Vertex::from_tupples(vert_pos, tex_coords));
+        }
+        verts
+    }
+
+    //     5
+    //  4     0
+    //  3     1
+    //     2
+    fn get_cover_hex_vertex(hex: &Hex, index: usize) -> (f32, f32, f32) {
+        if index > 5 {
+            panic!("index out of range")
+        }
+        // get hex relative coords
+        let sides_x = 0.5;
+        let sides_y = RATIO / 4.0;
+        let bottom_y = RATIO / 2.0;
+        let mut coords = match index {
+            0 => (sides_x, -sides_y - RATIO),
+            1 => (sides_x, sides_y),
+            2 => (0.0, bottom_y),
+            3 => (-sides_x, sides_y),
+            4 => (-sides_x, -sides_y - RATIO),
+            _ => (0.0, -bottom_y - RATIO),
+        };
+        // add absolute coords
+        coords.0 += hex.center_x;
+        coords.1 += hex.center_y;
+        // multiply by multiplier
+        let height = if index > 3 || index == 0 {
+            -0.5
+        } else {
+            0.0
+        };
+        (coords.0, coords.1, height)
+    }
 }
 
 impl Renderer for Sprite {
@@ -163,16 +234,20 @@ impl Renderer for Sprite {
         let events_loop = glutin::EventsLoop::new();
         let size = glutin::dpi::LogicalSize::new(w, h);
         let window = glutin::WindowBuilder::new().with_visibility(false).with_dimensions(size).with_decorations(false);
-        let context = glutin::ContextBuilder::new().with_multisampling(8);
+        let context = glutin::ContextBuilder::new().with_multisampling(8).with_depth_buffer(24);
         let display = Display::new(window, context, &events_loop).unwrap();
 
         display.gl_window().hide();
 
         let textures = self.load_textures(&display);
 
-        let shape: Vec<Vertex> = Sprite::get_hex_points(&map.field[0]);
         implement_vertex!(Vertex, position, tex_coords);
+
+        let shape: Vec<Vertex> = Sprite::get_hex_points(&map.field[0]);
         let vertex_buffer = VertexBuffer::new(&display, &shape).unwrap();
+
+        let shape_cover: Vec<Vertex> = Sprite::get_cover_shape();
+        let vertex_buffer_cover = VertexBuffer::new(&display, &shape_cover).unwrap();
 
         let indices = index::NoIndices(index::PrimitiveType::TriangleStrip);
 
@@ -245,11 +320,61 @@ impl Renderer for Sprite {
             instances.insert(key.to_owned(), v_buffer);
         }
 
+        let mut instances_cover = HashMap::new();
+        let mut rng = thread_rng();
+        let hex_type_map = HexType::get_string_map();
+        for key in hex_type_map.keys() {
+            let data = map.field.iter().filter_map(|hex| {
+                let hex_type = hex_type_map.get(key).unwrap();
+                if hex.terrain_type != *hex_type {
+                    return None
+                }
+                let color_diff_range = 0.04;
+                let color_diff: f32 = match &self.random_color {
+                    Setting::None => 1.0,
+                    Setting::All => rng.gen_range(1.0 - color_diff_range, 1.0 + color_diff_range),
+                    Setting::Some(types) => {
+                        let mut val = 1.0;
+                        for h_type in types {
+                            if h_type == hex_type {
+                                val = rng.gen_range(1.0 - color_diff_range, 1.0 + color_diff_range);
+                            }
+                        }
+                        val
+                    }
+                };
+                let rotation = Sprite::get_rotation(0);
+                let mut vec: Vec<Attr> = Vec::new();
+                vec.push(Attr {
+                    world_position: (hex.center_x - 0.5, hex.center_y - RATIO / 2.0),
+                    color_diff,
+                    rotation
+                });
+                if self.wrap_map {
+                    vec.push(Attr {
+                        world_position: (hex.center_x - 0.5 - map.size_x as f32, hex.center_y - RATIO / 2.0),
+                        color_diff,
+                        rotation
+                    });
+                    vec.push(Attr {
+                        world_position: (hex.center_x - 0.5 + map.size_x as f32, hex.center_y - RATIO / 2.0),
+                        color_diff,
+                        rotation
+                    });
+                }
+                Some(vec)
+            }).flatten().collect::<Vec<_>>();
+            let v_buffer = vertex::VertexBuffer::dynamic(&display, &data).unwrap();
+            instances_cover.insert(key.to_owned(), v_buffer);
+        }
+
         // keep shaders in different files and include them on compile
         let vertex_shader_src = include_str!("vert_sprite.glsl");
         let fragment_shader_src = include_str!("frag_sprite.glsl");
+        let fragment_shader_cover_src = include_str!("frag_sprite_cover.glsl");
 
         let program = Program::from_source(&display, vertex_shader_src, fragment_shader_src, None).unwrap();
+        let program_cover = Program::from_source(&display, vertex_shader_src, fragment_shader_cover_src, None).unwrap();
 
         debug_println!("program generated");
 
@@ -265,6 +390,7 @@ impl Renderer for Sprite {
                 if self.wrap_map {
                     target.clear_color(0.79, 0.82, 0.8, 1.0);
                 }
+                target.clear_depth(1.0);
                 // render hexes
                 for key in hex_type_map.keys() {
                     let uniforms = uniform! {
@@ -278,6 +404,38 @@ impl Renderer for Sprite {
                     };
                     target.draw((&vertex_buffer, instances.get(key).unwrap().per_instance().unwrap()),
                         &indices, &program, &uniforms, &Default::default()).unwrap();
+                }
+                // render 2.5d hexes
+                for key in hex_type_map.keys() {
+                    match &self.render_in_25d {
+                        Setting::None => break,
+                        Setting::All => {},
+                        Setting::Some(val) => {
+                            if !val.contains(&hex_type_map[key]) {
+                                continue;
+                            }
+                        }
+                    };
+                    let cover_key = String::from(key.to_owned() + "_cover");
+                    let uniforms = uniform! {
+                        total_x: map.absolute_size_x,
+                        total_y: map.absolute_size_y,
+                        win_size: Sprite::TILE_SIZE as f32,
+                        mult: self.multiplier,
+                        tile_x: x as f32,
+                        tile_y: y as f32,
+                        tex: textures.get(&cover_key).unwrap(),
+                    };
+                    let params = glium::DrawParameters{
+                        depth: glium::Depth{
+                            test: glium::DepthTest::IfLess,
+                            write: true,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    };
+                    target.draw((&vertex_buffer_cover, instances_cover.get(key).unwrap().per_instance().unwrap()),
+                        &indices, &program_cover, &uniforms, &params).unwrap();
                 }
                 target.finish().unwrap();
 
@@ -302,13 +460,13 @@ impl Renderer for Sprite {
 
 #[derive(Copy, Clone)]
 struct Vertex {
-    position: [f32; 2],
+    position: [f32; 3],
     tex_coords: [f32; 2],
 }
 
 impl Vertex {
-    pub fn from_tupples(coords: (f32, f32), tex_coords: (f32, f32)) -> Vertex {
-        Vertex{position: [coords.0, coords.1], tex_coords: [tex_coords.0, tex_coords.1]}
+    pub fn from_tupples(coords: (f32, f32, f32), tex_coords: (f32, f32)) -> Vertex {
+        Vertex{position: [coords.0, coords.1, coords.2], tex_coords: [tex_coords.0, tex_coords.1]}
     }
 }
 

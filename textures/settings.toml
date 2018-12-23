@@ -1,2 +1,3 @@
 random_rotation = true
 random_color = ["Field"]
+render_in_25d = ["Mountain", "Forest", "Jungle"]
