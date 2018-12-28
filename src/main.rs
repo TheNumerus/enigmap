@@ -30,6 +30,7 @@ fn main() {
 
     // render image
     let mut renderer = Sprite::from_folder("./textures");
+    renderer.set_scale(100.0);
     
     let mut img: RgbImage = ImageBuffer::new(1,1);
 

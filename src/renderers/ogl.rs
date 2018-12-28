@@ -22,8 +22,8 @@ impl OGL {
         let mut verts: Vec<Vertex> = Vec::new();
         // divide hex into 4 triangles
         let indices = [5,4,0,3,1,2];
-        for i in 0..6 {
-            verts.push(Vertex::from_tupple(OGL::get_hex_vertex(hex, indices[i])));
+        for &i in indices.iter() {
+            verts.push(Vertex::from_tupple(OGL::get_hex_vertex(hex, i)));
         }
         verts
     }
@@ -99,14 +99,8 @@ impl Renderer for OGL {
                     color
                 });
                 if self.wrap_map {
-                    vec.push(Attr {
-                        world_position: (hex.center_x - 0.5 - map.size_x as f32, hex.center_y - RATIO / 2.0),
-                        color
-                    });
-                    vec.push(Attr {
-                        world_position: (hex.center_x - 0.5 + map.size_x as f32, hex.center_y - RATIO / 2.0),
-                        color
-                    });
+                    vec.push(Attr{world_position: (vec[0].world_position.0 - map.size_x as f32, vec[0].world_position.1), ..vec[0]});
+                    vec.push(Attr{world_position: (vec[0].world_position.0 + map.size_x as f32, vec[0].world_position.1), ..vec[0]});
                 }
                 vec
             }).flatten().collect::<Vec<_>>();

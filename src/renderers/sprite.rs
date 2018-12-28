@@ -31,6 +31,7 @@ pub struct Sprite {
     random_rotation: Setting,
     random_color: Setting,
     render_in_25d: Setting,
+    variations: HashMap<String, u32>,
 }
 
 impl Sprite {
@@ -39,8 +40,8 @@ impl Sprite {
         let mut verts: Vec<Vertex> = Vec::new();
         // divide hex into 4 triangles
         let indices = [5,4,0,3,1,2];
-        for i in 0..6 {
-            let vert_pos = Sprite::get_hex_vertex(hex, indices[i]);
+        for &i in indices.iter() {
+            let vert_pos = Sprite::get_hex_vertex(hex, i);
             let vert_pos = (vert_pos.0, vert_pos.1, 0.0);
             let tex_coords = ((vert_pos.0 - 0.5) / RATIO + 0.5, 1.0 - vert_pos.1 / RATIO);
             verts.push(Vertex::from_tupples(vert_pos, tex_coords));
@@ -52,15 +53,20 @@ impl Sprite {
         self.wrap_map = value;
     }
 
-    /// Creates new instance of Sprite with specified folder
+    /// Creates new instance of Sprite using specified folder as a source of textures
     pub fn from_folder(folder: &str) -> Sprite {
+        let mut empty_variations = HashMap::new();
+        for hextype in HexType::get_string_map().keys() {
+            empty_variations.insert(hextype.to_owned(), 1);
+        }
         let mut renderer = Sprite{
             multiplier: 50.0,
             wrap_map: false,
             texture_folder: folder.to_string(),
             random_color: Setting::None,
             random_rotation: Setting::All,
-            render_in_25d: Setting::None
+            render_in_25d: Setting::None,
+            variations: empty_variations
         };
         // check for path
         if !Path::new(folder).exists() {
@@ -83,7 +89,7 @@ impl Sprite {
         };
         let mut settings = String::new();
         // load contents and handle errors
-        if let Err(_) = file.read_to_string(&mut settings) {
+        if file.read_to_string(&mut settings).is_err() {
             println!("WARNING! Error when reading settings file. Renderer will use default settings.");
             return renderer;
         }
@@ -99,8 +105,25 @@ impl Sprite {
         if let Some(val) = Sprite::parse_setting("render_in_25d", &settings) {
             renderer.render_in_25d = val;
         }
+        // check for variations table
+        if let Some(val) = settings.get("variations") {
+            // check if it is table
+            if let Value::Table(table) = val {
+                // iterate over all hextpyes
+                for (hextype, variations) in &mut renderer.variations {
+                    // check if valie is in table
+                    if let Some(number) = table.get(hextype) {
+                        // check if value in table as a number
+                        if let Value::Integer(int) = number {
+                            *variations = *int as u32;
+                        }
+                    }
+                }
+            }
+        }
+        println!("{:?}", settings);
         println!("{:?}", renderer);
-        return renderer;
+        renderer
     }
 
     fn parse_setting(setting: &str, settings: &Value) -> Option<Setting> {
@@ -125,14 +148,14 @@ impl Sprite {
         let map = HexType::get_string_map();
         let mut textures: HashMap<String, glium::texture::texture2d::Texture2d> = HashMap::new();
         for key in map.keys() {
-            let image = match image::open(self.texture_folder.to_owned() + "/" + &key.to_owned() +".png") {
-                Ok(image) => image.to_rgba(),
-                Err(_err) => Self::generate_error_texture()
-            };
-            let image_dimensions = image.dimensions();
-            let image = glium::texture::RawImage2d::from_raw_rgba_reversed(&image.into_raw(), image_dimensions);
-            let texture = glium::texture::Texture2d::new(display, image).unwrap();
+            let texture = self.texture_from_path(display, &format!("/{}.png", key));
             textures.insert(key.to_owned(), texture);
+            // check for alternative textures
+            let max_textures = self.variations[key];
+            for i in 1..max_textures {
+                let texture = self.texture_from_path(display, &format!("/{}_{}.png", key, i));
+                textures.insert(key.to_owned() + "_" + &i.to_string(), texture);
+            }
         }
         // load cover textures
         for key in map.keys() {
@@ -145,13 +168,7 @@ impl Sprite {
                     }
                 }
             };
-            let image = match image::open(self.texture_folder.to_owned() + "/" + &key.to_owned() +"_cover.png") {
-                Ok(image) => image.to_rgba(),
-                Err(_err) => Self::generate_error_texture()
-            };
-            let image_dimensions = image.dimensions();
-            let image = glium::texture::RawImage2d::from_raw_rgba_reversed(&image.into_raw(), image_dimensions);
-            let texture = glium::texture::Texture2d::new(display, image).unwrap();
+            let texture = self.texture_from_path(display, &format!("/{}_cover.png", key));
             textures.insert(key.to_owned() + "_cover", texture);
         }
 
@@ -171,6 +188,16 @@ impl Sprite {
         })
     }
 
+    fn texture_from_path(&self, display: &glium::backend::glutin::Display, path: &str) -> glium::texture::texture2d::Texture2d {
+        let image = match image::open(self.texture_folder.to_owned() + path) {
+            Ok(image) => image.to_rgba(),
+            Err(_err) => Self::generate_error_texture()
+        };
+        let image_dimensions = image.dimensions();
+        let image = glium::texture::RawImage2d::from_raw_rgba_reversed(&image.into_raw(), image_dimensions);
+        glium::texture::Texture2d::new(display, image).unwrap()
+    }
+
     fn get_rotation(index: u32) -> [[f32; 2];2] {
         let angle = index as f32 / 6.0 * (f32::consts::PI * 2.0);
         [[angle.cos(), angle.sin()], [-angle.sin(), angle.cos()]]
@@ -181,8 +208,8 @@ impl Sprite {
         let dummy_hex = Hex::from_coords(0,0);
         // divide hex into 4 triangles
         let indices = [5,4,0,3,1,2];
-        for i in 0..6 {
-            let vert_pos = Sprite::get_cover_hex_vertex(&dummy_hex, indices[i]);
+        for &i in indices.iter() {
+            let vert_pos = Sprite::get_cover_hex_vertex(&dummy_hex, i);
             let tex_coords = ((vert_pos.0 - 0.5) / RATIO + 0.5, 1.0 - vert_pos.1 / (2.0 * RATIO) + 0.5);
             verts.push(Vertex::from_tupples(vert_pos, tex_coords));
         }
@@ -256,7 +283,7 @@ impl Renderer for Sprite {
         struct Attr {
             world_position: (f32, f32),
             color_diff: f32,
-            rotation: [[f32; 2];2]
+            rotation: [[f32; 2];2],
         }
         implement_vertex!(Attr, world_position, color_diff, rotation);
 
@@ -265,36 +292,22 @@ impl Renderer for Sprite {
         let hex_type_map = HexType::get_string_map();
         for key in hex_type_map.keys() {
             let data = map.field.iter().filter_map(|hex| {
-                let hex_type = hex_type_map.get(key).unwrap();
-                if hex.terrain_type != *hex_type {
+                let hex_type = hex_type_map[key];
+                if hex.terrain_type != hex_type {
                     return None
                 }
+                // random color
                 let color_diff_range = 0.04;
-                let color_diff: f32 = match &self.random_color {
-                    Setting::None => 1.0,
-                    Setting::All => rng.gen_range(1.0 - color_diff_range, 1.0 + color_diff_range),
-                    Setting::Some(types) => {
-                        let mut val = 1.0;
-                        for h_type in types {
-                            if h_type == hex_type {
-                                val = rng.gen_range(1.0 - color_diff_range, 1.0 + color_diff_range);
-                            }
-                        }
-                        val
-                    }
+                let color_diff = if self.random_color.is_hextype_included(&hex_type) {
+                    rng.gen_range(1.0 - color_diff_range, 1.0 + color_diff_range)
+                } else {
+                    1.0
                 };
-                let rotation = match &self.random_rotation {
-                    Setting::None => Sprite::get_rotation(0),
-                    Setting::All => Sprite::get_rotation(rng.gen_range::<u32>(0,5)),
-                    Setting::Some(types) => {
-                        let mut val = Sprite::get_rotation(0);
-                        for h_type in types {
-                            if h_type == hex_type {
-                                val = Sprite::get_rotation(rng.gen_range::<u32>(0,5));
-                            }
-                        }
-                        val
-                    }
+                // random rotation
+                let rotation = if self.random_rotation.is_hextype_included(&hex_type) {
+                    Sprite::get_rotation(rng.gen_range::<u32>(0,5))
+                } else {
+                    Sprite::get_rotation(0)
                 };
                 let mut vec: Vec<Attr> = Vec::new();
                 vec.push(Attr {
@@ -303,16 +316,8 @@ impl Renderer for Sprite {
                     rotation
                 });
                 if self.wrap_map {
-                    vec.push(Attr {
-                        world_position: (hex.center_x - 0.5 - map.size_x as f32, hex.center_y - RATIO / 2.0),
-                        color_diff,
-                        rotation
-                    });
-                    vec.push(Attr {
-                        world_position: (hex.center_x - 0.5 + map.size_x as f32, hex.center_y - RATIO / 2.0),
-                        color_diff,
-                        rotation
-                    });
+                    vec.push(Attr{world_position: (vec[0].world_position.0 - map.size_x as f32, vec[0].world_position.1), ..vec[0]});
+                    vec.push(Attr{world_position: (vec[0].world_position.0 + map.size_x as f32, vec[0].world_position.1), ..vec[0]});
                 }
                 Some(vec)
             }).flatten().collect::<Vec<_>>();
@@ -321,28 +326,21 @@ impl Renderer for Sprite {
         }
 
         let mut instances_cover = HashMap::new();
-        let mut rng = thread_rng();
         let hex_type_map = HexType::get_string_map();
         for key in hex_type_map.keys() {
             let data = map.field.iter().filter_map(|hex| {
-                let hex_type = hex_type_map.get(key).unwrap();
-                if hex.terrain_type != *hex_type {
+                let hex_type = hex_type_map[key];
+                if hex.terrain_type != hex_type {
                     return None
                 }
+                // random color
                 let color_diff_range = 0.04;
-                let color_diff: f32 = match &self.random_color {
-                    Setting::None => 1.0,
-                    Setting::All => rng.gen_range(1.0 - color_diff_range, 1.0 + color_diff_range),
-                    Setting::Some(types) => {
-                        let mut val = 1.0;
-                        for h_type in types {
-                            if h_type == hex_type {
-                                val = rng.gen_range(1.0 - color_diff_range, 1.0 + color_diff_range);
-                            }
-                        }
-                        val
-                    }
+                let color_diff = if self.random_color.is_hextype_included(&hex_type) {
+                    rng.gen_range(1.0 - color_diff_range, 1.0 + color_diff_range)
+                } else {
+                    1.0
                 };
+                // random color
                 let rotation = Sprite::get_rotation(0);
                 let mut vec: Vec<Attr> = Vec::new();
                 vec.push(Attr {
@@ -351,16 +349,8 @@ impl Renderer for Sprite {
                     rotation
                 });
                 if self.wrap_map {
-                    vec.push(Attr {
-                        world_position: (hex.center_x - 0.5 - map.size_x as f32, hex.center_y - RATIO / 2.0),
-                        color_diff,
-                        rotation
-                    });
-                    vec.push(Attr {
-                        world_position: (hex.center_x - 0.5 + map.size_x as f32, hex.center_y - RATIO / 2.0),
-                        color_diff,
-                        rotation
-                    });
+                    vec.push(Attr{world_position: (vec[0].world_position.0 - map.size_x as f32, vec[0].world_position.1), ..vec[0]});
+                    vec.push(Attr{world_position: (vec[0].world_position.0 + map.size_x as f32, vec[0].world_position.1), ..vec[0]});
                 }
                 Some(vec)
             }).flatten().collect::<Vec<_>>();
@@ -400,9 +390,9 @@ impl Renderer for Sprite {
                         mult: self.multiplier,
                         tile_x: x as f32,
                         tile_y: y as f32,
-                        tex: textures.get(key).unwrap(),
+                        tex: &textures[key],
                     };
-                    target.draw((&vertex_buffer, instances.get(key).unwrap().per_instance().unwrap()),
+                    target.draw((&vertex_buffer, instances[key].per_instance().unwrap()),
                         &indices, &program, &uniforms, &Default::default()).unwrap();
                 }
                 // render 2.5d hexes
@@ -416,7 +406,7 @@ impl Renderer for Sprite {
                             }
                         }
                     };
-                    let cover_key = String::from(key.to_owned() + "_cover");
+                    let cover_key = key.to_owned() + "_cover";
                     let uniforms = uniform! {
                         total_x: map.absolute_size_x,
                         total_y: map.absolute_size_y,
@@ -424,7 +414,7 @@ impl Renderer for Sprite {
                         mult: self.multiplier,
                         tile_x: x as f32,
                         tile_y: y as f32,
-                        tex: textures.get(&cover_key).unwrap(),
+                        tex: &textures[&cover_key],
                     };
                     let params = glium::DrawParameters{
                         depth: glium::Depth{
@@ -434,7 +424,7 @@ impl Renderer for Sprite {
                         },
                         ..Default::default()
                     };
-                    target.draw((&vertex_buffer_cover, instances_cover.get(key).unwrap().per_instance().unwrap()),
+                    target.draw((&vertex_buffer_cover, instances_cover[key].per_instance().unwrap()),
                         &indices, &program_cover, &uniforms, &params).unwrap();
                 }
                 target.finish().unwrap();
@@ -478,7 +468,7 @@ enum Setting {
 }
 
 impl Setting {
-    fn parse_array(arr: &Vec<Value>) -> Setting {
+    fn parse_array(arr: &[Value]) -> Setting {
         let map = HexType::get_string_map();
         let mut types: Vec<HexType> = Vec::new();
         for val in arr {
@@ -489,9 +479,24 @@ impl Setting {
                 }
             }
         }
-        if types.len() == 0 {
+        if types.is_empty() {
             return Setting::None;
         }
-        return Setting::Some(types);
+        Setting::Some(types)
+    }
+
+    fn is_hextype_included (&self, hex_type: &HexType) -> bool {
+        match self {
+            Setting::None => false,
+            Setting::All => true,
+            Setting::Some(types) => {
+                for h_type in types {
+                    if h_type == hex_type {
+                        return true
+                    }
+                }
+                false
+            }
+        }
     }
 }

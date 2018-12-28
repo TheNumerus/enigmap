@@ -57,7 +57,7 @@ pub trait Renderer {
     }
 
     /// Returns image generated from tiles
-    fn tiles_to_image(&self, tiles: &Vec<Vec<u8>>, map: &HexMap, multiplier: f32, fix_gamma: bool) -> ImageBuffer<Rgb<u8>, Vec<u8>> {
+    fn tiles_to_image(&self, tiles: &[Vec<u8>], map: &HexMap, multiplier: f32, fix_gamma: bool) -> ImageBuffer<Rgb<u8>, Vec<u8>> {
         let tiles_x = ((map.absolute_size_x * multiplier) / Self::TILE_SIZE as f32).ceil() as u32;
         let target_size_x = (map.absolute_size_x * multiplier) as u32;
         let target_size_y = (map.absolute_size_y * multiplier) as u32;
