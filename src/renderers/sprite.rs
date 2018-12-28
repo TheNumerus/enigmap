@@ -288,74 +288,95 @@ impl Renderer for Sprite {
         implement_vertex!(Attr, world_position, color_diff, rotation);
 
         let mut instances = HashMap::new();
+        let mut instances_cover = HashMap::new();
+
         let mut rng = thread_rng();
         let hex_type_map = HexType::get_string_map();
-        for key in hex_type_map.keys() {
-            let data = map.field.iter().filter_map(|hex| {
-                let hex_type = hex_type_map[key];
-                if hex.terrain_type != hex_type {
-                    return None
-                }
-                // random color
-                let color_diff_range = 0.04;
-                let color_diff = if self.random_color.is_hextype_included(&hex_type) {
-                    rng.gen_range(1.0 - color_diff_range, 1.0 + color_diff_range)
-                } else {
-                    1.0
-                };
-                // random rotation
-                let rotation = if self.random_rotation.is_hextype_included(&hex_type) {
-                    Sprite::get_rotation(rng.gen_range::<u32>(0,5))
-                } else {
-                    Sprite::get_rotation(0)
-                };
-                let mut vec: Vec<Attr> = Vec::new();
-                vec.push(Attr {
-                    world_position: (hex.center_x - 0.5, hex.center_y - RATIO / 2.0),
-                    color_diff,
-                    rotation
-                });
-                if self.wrap_map {
-                    vec.push(Attr{world_position: (vec[0].world_position.0 - map.size_x as f32, vec[0].world_position.1), ..vec[0]});
-                    vec.push(Attr{world_position: (vec[0].world_position.0 + map.size_x as f32, vec[0].world_position.1), ..vec[0]});
-                }
-                Some(vec)
-            }).flatten().collect::<Vec<_>>();
-            let v_buffer = vertex::VertexBuffer::dynamic(&display, &data).unwrap();
-            instances.insert(key.to_owned(), v_buffer);
-        }
 
-        let mut instances_cover = HashMap::new();
-        let hex_type_map = HexType::get_string_map();
         for key in hex_type_map.keys() {
-            let data = map.field.iter().filter_map(|hex| {
-                let hex_type = hex_type_map[key];
-                if hex.terrain_type != hex_type {
+            let colors = map.field.iter().filter_map(|hex| {
+                if hex.terrain_type != hex_type_map[key] {
                     return None
                 }
-                // random color
-                let color_diff_range = 0.04;
-                let color_diff = if self.random_color.is_hextype_included(&hex_type) {
-                    rng.gen_range(1.0 - color_diff_range, 1.0 + color_diff_range)
+                Some(rng.gen_range::<u32>(1, self.variations[key] + 1))
+            }).collect::<Vec<u32>>();
+            for i in 1..=self.variations[key] {
+                let mut colors_iter = colors.iter();
+                let data = map.field.iter().filter_map(|hex| {
+                    let hex_type = hex_type_map[key];
+                    if hex.terrain_type != hex_type {
+                        return None
+                    }
+                    if i != *colors_iter.next().unwrap() {
+                        return None
+                    }
+                    // random color
+                    let color_diff_range = 0.04;
+                    let color_diff = if self.random_color.is_hextype_included(&hex_type) {
+                        rng.gen_range(1.0 - color_diff_range, 1.0 + color_diff_range)
+                    } else {
+                        1.0
+                    };
+                    // random rotation
+                    let rotation = if self.random_rotation.is_hextype_included(&hex_type) {
+                        Sprite::get_rotation(rng.gen_range::<u32>(0,5))
+                    } else {
+                        Sprite::get_rotation(0)
+                    };
+                    let mut vec: Vec<Attr> = Vec::new();
+                    vec.push(Attr {
+                        world_position: (hex.center_x - 0.5, hex.center_y - RATIO / 2.0),
+                        color_diff,
+                        rotation
+                    });
+                    if self.wrap_map {
+                        vec.push(Attr{world_position: (vec[0].world_position.0 - map.size_x as f32, vec[0].world_position.1), ..vec[0]});
+                        vec.push(Attr{world_position: (vec[0].world_position.0 + map.size_x as f32, vec[0].world_position.1), ..vec[0]});
+                    }
+                    Some(vec)
+                }).flatten().collect::<Vec<_>>();
+                let v_buffer = vertex::VertexBuffer::dynamic(&display, &data).unwrap();
+                if i == 1 {
+                    instances.insert(key.to_owned(), v_buffer);
                 } else {
-                    1.0
-                };
-                // random color
-                let rotation = Sprite::get_rotation(0);
-                let mut vec: Vec<Attr> = Vec::new();
-                vec.push(Attr {
-                    world_position: (hex.center_x - 0.5, hex.center_y - RATIO / 2.0),
-                    color_diff,
-                    rotation
-                });
-                if self.wrap_map {
-                    vec.push(Attr{world_position: (vec[0].world_position.0 - map.size_x as f32, vec[0].world_position.1), ..vec[0]});
-                    vec.push(Attr{world_position: (vec[0].world_position.0 + map.size_x as f32, vec[0].world_position.1), ..vec[0]});
+                    instances.insert(format!("{}_{}", key, i - 1), v_buffer);
                 }
-                Some(vec)
-            }).flatten().collect::<Vec<_>>();
-            let v_buffer = vertex::VertexBuffer::dynamic(&display, &data).unwrap();
-            instances_cover.insert(key.to_owned(), v_buffer);
+            }
+        }
+        
+        if let Setting::None = &self.render_in_25d {} else {
+            for key in hex_type_map.keys() {
+                if self.render_in_25d.is_hextype_included(&hex_type_map[key]) {
+                    let data = map.field.iter().filter_map(|hex| {
+                        let hex_type = hex_type_map[key];
+                        if hex.terrain_type != hex_type {
+                            return None
+                        }
+                        // random color
+                        let color_diff_range = 0.04;
+                        let color_diff = if self.random_color.is_hextype_included(&hex_type) {
+                            rng.gen_range(1.0 - color_diff_range, 1.0 + color_diff_range)
+                        } else {
+                            1.0
+                        };
+                        // random color
+                        let rotation = Sprite::get_rotation(0);
+                        let mut vec: Vec<Attr> = Vec::new();
+                        vec.push(Attr {
+                            world_position: (hex.center_x - 0.5, hex.center_y - RATIO / 2.0),
+                            color_diff,
+                            rotation
+                        });
+                        if self.wrap_map {
+                            vec.push(Attr{world_position: (vec[0].world_position.0 - map.size_x as f32, vec[0].world_position.1), ..vec[0]});
+                            vec.push(Attr{world_position: (vec[0].world_position.0 + map.size_x as f32, vec[0].world_position.1), ..vec[0]});
+                        }
+                        Some(vec)
+                    }).flatten().collect::<Vec<_>>();
+                    let v_buffer = vertex::VertexBuffer::dynamic(&display, &data).unwrap();
+                    instances_cover.insert(key.to_owned(), v_buffer);
+                }
+            }
         }
 
         // keep shaders in different files and include them on compile
@@ -371,8 +392,6 @@ impl Renderer for Sprite {
         let mut tiles: Vec<Vec<u8>> = vec![];
 
         // rendering
-        let hex_type_map = HexType::get_string_map();
-
         for y in 0..tiles_y {
             for x in 0..tiles_x {
                 let mut target = display.draw();
@@ -382,7 +401,7 @@ impl Renderer for Sprite {
                 }
                 target.clear_depth(1.0);
                 // render hexes
-                for key in hex_type_map.keys() {
+                for key in instances.keys() {
                     let uniforms = uniform! {
                         total_x: map.absolute_size_x,
                         total_y: map.absolute_size_y,
@@ -396,16 +415,7 @@ impl Renderer for Sprite {
                         &indices, &program, &uniforms, &Default::default()).unwrap();
                 }
                 // render 2.5d hexes
-                for key in hex_type_map.keys() {
-                    match &self.render_in_25d {
-                        Setting::None => break,
-                        Setting::All => {},
-                        Setting::Some(val) => {
-                            if !val.contains(&hex_type_map[key]) {
-                                continue;
-                            }
-                        }
-                    };
+                for key in instances_cover.keys() {
                     let cover_key = key.to_owned() + "_cover";
                     let uniforms = uniform! {
                         total_x: map.absolute_size_x,
