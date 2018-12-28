@@ -2,6 +2,7 @@ use rand::{
     distributions::{Distribution, Standard},
     Rng
 };
+use std::collections::HashMap;
 use crate::hexmap::HexMap;
 
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -163,6 +164,23 @@ impl Distribution<HexType> for Standard {
             8 => HexType::Ice,
             _ => HexType::Jungle
         }
+    }
+}
+
+impl HexType {
+    pub fn get_string_map() -> HashMap<String, HexType> {
+        let mut map: HashMap<String, HexType> = HashMap::new();
+        map.insert(String::from("Field"), HexType::Field);
+        map.insert(String::from("Forest"), HexType::Forest);
+        map.insert(String::from("Desert"), HexType::Desert);
+        map.insert(String::from("Tundra"), HexType::Tundra);
+        map.insert(String::from("Water"), HexType::Water);
+        map.insert(String::from("Ocean"), HexType::Ocean);
+        map.insert(String::from("Mountain"), HexType::Mountain);
+        map.insert(String::from("Impassable"), HexType::Impassable);
+        map.insert(String::from("Ice"), HexType::Ice);
+        map.insert(String::from("Jungle"), HexType::Jungle);
+        map
     }
 }
 

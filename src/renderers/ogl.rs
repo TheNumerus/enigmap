@@ -1,12 +1,10 @@
 use glium::*;
 use rand::prelude::*;
-use image::{RgbImage, ImageBuffer, DynamicImage, Rgb};
+use image::{RgbImage, DynamicImage};
 
 use crate::hexmap::HexMap;
 use crate::hex::{Hex, HexType, RATIO};
 use crate::renderers::Renderer;
-
-const TILE_SIZE: u32 = 1024;
 
 /// Basic hardware renderer
 /// 
@@ -24,8 +22,8 @@ impl OGL {
         let mut verts: Vec<Vertex> = Vec::new();
         // divide hex into 4 triangles
         let indices = [5,4,0,3,1,2];
-        for i in 0..6 {
-            verts.push(Vertex::from_tupple(OGL::get_hex_vertex(hex, indices[i])));
+        for &i in indices.iter() {
+            verts.push(Vertex::from_tupple(OGL::get_hex_vertex(hex, i)));
         }
         verts
     }
@@ -36,11 +34,13 @@ impl OGL {
 }
 
 impl Renderer for OGL {
+    const TILE_SIZE: u32 = 1024;
+
     fn render(&self, map: &HexMap) -> RgbImage {
-        let w = TILE_SIZE as f64;
+        let w = OGL::TILE_SIZE as f64;
         let h = w;
-        let tiles_x = ((map.absolute_size_x * self.multiplier) / TILE_SIZE as f32).ceil() as u32;
-        let tiles_y = ((map.absolute_size_y * self.multiplier) / TILE_SIZE as f32).ceil() as u32;
+        let tiles_x = ((map.absolute_size_x * self.multiplier) / OGL::TILE_SIZE as f32).ceil() as u32;
+        let tiles_y = ((map.absolute_size_y * self.multiplier) / OGL::TILE_SIZE as f32).ceil() as u32;
 
         let events_loop = glutin::EventsLoop::new();
         let size = glutin::dpi::LogicalSize::new(w, h);
@@ -99,14 +99,8 @@ impl Renderer for OGL {
                     color
                 });
                 if self.wrap_map {
-                    vec.push(Attr {
-                        world_position: (hex.center_x - 0.5 - map.size_x as f32, hex.center_y - RATIO / 2.0),
-                        color
-                    });
-                    vec.push(Attr {
-                        world_position: (hex.center_x - 0.5 + map.size_x as f32, hex.center_y - RATIO / 2.0),
-                        color
-                    });
+                    vec.push(Attr{world_position: (vec[0].world_position.0 - map.size_x as f32, vec[0].world_position.1), ..vec[0]});
+                    vec.push(Attr{world_position: (vec[0].world_position.0 + map.size_x as f32, vec[0].world_position.1), ..vec[0]});
                 }
                 vec
             }).flatten().collect::<Vec<_>>();
@@ -136,7 +130,7 @@ impl Renderer for OGL {
                 let uniforms = uniform! {
                     total_x: map.absolute_size_x,
                     total_y: map.absolute_size_y,
-                    win_size: TILE_SIZE as f32,
+                    win_size: OGL::TILE_SIZE as f32,
                     mult: self.multiplier,
                     tile_x: x as f32,
                     tile_y: y as f32
@@ -152,22 +146,7 @@ impl Renderer for OGL {
             }
         }
         debug_println!("tiles rendered");
-
-        let target_size_x = (map.absolute_size_x * self.multiplier) as u32;
-        let target_size_y = (map.absolute_size_y * self.multiplier) as u32;
-        let mut imgbuf: ImageBuffer<Rgb<u8>, Vec<u8>> = ImageBuffer::from_fn(target_size_x, target_size_y, |x, y| {
-            let tile_x = x / TILE_SIZE;
-            let tile_y = y / TILE_SIZE;
-            let tile_idx = (tile_x + tile_y * tiles_x) as usize;
-            let x = x - tile_x * TILE_SIZE;
-            let y = y - tile_y * TILE_SIZE;
-            let index = 4 * (x + y * TILE_SIZE) as usize;
-            // remove alpha channel
-            Rgb([tiles[tile_idx][index], tiles[tile_idx][index + 1], tiles[tile_idx][index + 2]])
-        });
-        debug_println!("image generated");
-        imgbuf = DynamicImage::ImageRgb8(imgbuf).to_rgb();
-        imgbuf
+        DynamicImage::ImageRgb8(self.tiles_to_image(&tiles, map, self.multiplier, true)).to_rgb()
     }
 
     fn set_scale(&mut self, scale: f32) {
@@ -187,11 +166,11 @@ impl Default for OGL {
 
 #[derive(Copy, Clone)]
 struct Vertex {
-    position: [f32; 2],
+    position: [f32; 3],
 }
 
 impl Vertex {
     pub fn from_tupple(coords: (f32, f32)) -> Vertex {
-        Vertex{position: [coords.0, coords.1]}
+        Vertex{position: [coords.0, coords.1, 0.0]}
     }
 }

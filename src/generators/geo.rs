@@ -340,7 +340,7 @@ impl Geo {
 
         // erode them
         let heights_copy = heights.clone();
-        let radius = rng.gen_range(radius as f32 * 0.5, radius as f32 * 1.0) as u32;
+        let radius = rng.gen_range((1.0 as f32).max(radius as f32 * 0.5), (2.0 as f32).max(radius as f32 * 1.0)) as u32;
         for (index, height) in heights.iter_mut().enumerate() {
             let coords = hexmap.index_to_coords(index as u32);
             let search_area = Hex::from_coords(coords.0, coords.1).get_spiral(hexmap, radius);

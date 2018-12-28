@@ -90,6 +90,8 @@ impl Default for Basic {
 }
 
 impl Renderer for Basic {
+    const TILE_SIZE: u32 = 0;
+
     fn render(&self, map: &HexMap) -> RgbImage {
         let w = (map.absolute_size_x * self.multiplier) as u32;
         let h = (map.absolute_size_y * self.multiplier) as u32;
