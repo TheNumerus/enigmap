@@ -1,7 +1,7 @@
 use enigmap::{
     prelude::*,
-    renderers::Sprite,
-    generators::Islands
+    renderers::{Sprite, OGL},
+    generators::Geo
 };
 
 use image::{RgbImage, ImageBuffer};
@@ -20,7 +20,7 @@ fn main() {
     let mut hexmap = HexMap::new(sizes.0, sizes.1);
 
     // generate map field
-    let mut gen = Islands::default();
+    let mut gen = Geo::default();
 
     set_seed(&mut gen);
 
@@ -29,8 +29,8 @@ fn main() {
     }, "Generation", 1);
 
     // render image
-    let mut renderer = Sprite::from_folder("./textures");
-    renderer.set_scale(100.0);
+    let mut renderer = OGL::default();
+    renderer.set_scale(10.0);
     
     let mut img: RgbImage = ImageBuffer::new(1,1);
 
