@@ -6,6 +6,10 @@ edition = "2018"
 description = "Hexagonal map generator and renderer"
 license = "MIT"
 repository = "https://github.com/TheNumerus/enigmap"
+exclude = [
+    ".vscode/*",
+    "out/*"
+]
 
 [dependencies]
 image = "0.20.0"
