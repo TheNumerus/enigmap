@@ -1,6 +1,6 @@
 use enigmap::{
     prelude::*,
-    renderers::Sprite,
+    renderers::Basic,
     generators::Islands
 };
 
@@ -29,8 +29,8 @@ fn main() {
     }, "Generation", 1);
 
     // render image
-    let mut renderer = Sprite::from_folder("./textures");
-    renderer.set_scale(100.0);
+    let mut renderer = Basic::default();
+    renderer.set_scale(10.0);
     
     let mut img: RgbImage = ImageBuffer::new(1,1);
 
