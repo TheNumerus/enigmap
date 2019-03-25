@@ -80,4 +80,7 @@ pub trait Renderer {
         });
         imgbuf
     }
+
+    /// Should the map repeat on the X axis
+    fn set_wrap_map(&mut self, value: bool);
 }

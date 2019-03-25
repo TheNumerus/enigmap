@@ -100,6 +100,21 @@ impl HexMap {
         // TODO
         self.get_closest_hex_index(x,y)
     }
+
+    /// Returns refrence to hex, does not check out of range hexes
+    pub fn get_hex(&self, x: i32, y: i32) -> &Hex {
+        &self.field[x as usize + y as usize * self.size_x as usize]
+    }
+
+    /// Returns mutable refrence to hex, does not check out of range hexes
+    pub fn get_hex_mut(&mut self, x: i32, y: i32) -> &mut Hex {
+        &mut self.field[x as usize + y as usize * self.size_x as usize]
+    }
+
+    /// Sets hex value
+    pub fn set_hex(&mut self, x: i32, y: i32, hex: Hex) {
+        self.field[x as usize + y as usize * self.size_x as usize] = hex
+    }
 }
 
 #[cfg(test)]

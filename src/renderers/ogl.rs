@@ -27,10 +27,6 @@ impl OGL {
         }
         verts
     }
-    /// Should the map repeat on the X axis
-    pub fn set_wrap_map(&mut self, value: bool) {
-        self.wrap_map = value;
-    }
 }
 
 impl Renderer for OGL {
@@ -155,6 +151,10 @@ impl Renderer for OGL {
         } else {
             panic!("Invalid scale, only positive values accepted")
         }
+    }
+
+    fn set_wrap_map(&mut self, value: bool) {
+        self.wrap_map = value;
     }
 }
 

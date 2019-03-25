@@ -3,10 +3,12 @@ use crate::hexmap::HexMap;
 mod circle;
 mod islands;
 mod geo;
+mod debug;
 
 pub use self::circle::Circle;
 pub use self::islands::Islands;
 pub use self::geo::Geo;
+pub use self::debug::Debug;
 
 /// Trait for map generators
 /// 

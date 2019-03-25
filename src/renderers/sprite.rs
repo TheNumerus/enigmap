@@ -48,10 +48,6 @@ impl Sprite {
         }
         verts
     }
-    /// Should the map repeat on the X axis
-    pub fn set_wrap_map(&mut self, value: bool) {
-        self.wrap_map = value;
-    }
 
     /// Creates new instance of Sprite using specified folder as a source of textures
     pub fn from_folder(folder: &str) -> Sprite {
@@ -455,6 +451,10 @@ impl Renderer for Sprite {
         } else {
             panic!("Invalid scale, only positive values accepted")
         }
+    }
+
+    fn set_wrap_map(&mut self, value: bool) {
+        self.wrap_map = value;
     }
 }
 

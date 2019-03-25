@@ -10,6 +10,7 @@ use rand::prelude::*;
 pub struct Basic {
     /// Size of `Hex` on X axis in pixels
     multiplier: f32,
+    wrap_map: bool
 }
 
 impl Basic {
@@ -90,7 +91,7 @@ impl Basic {
         }
     }
 
-    fn render_hex(&self, img: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, hex: &Hex) {
+    fn render_hex(&self, img: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, hex: &Hex, width: u32, render_wrapped: bool) {
         let mut rng = thread_rng();
         // randomize color a little bit
         let color_diff = rng.gen_range(0.98, 1.02);
@@ -113,19 +114,48 @@ impl Basic {
             HexType::Tundra => Rgb([62, 81, 77]),
             HexType::Desert => Rgb([214, 200, 109]),
             HexType::Jungle => Rgb([64, 163, 16]),
-            _ => Rgb([0, 0, 0])
+            HexType::Impassable => Rgb([140, 111, 83]),
+            HexType::Debug(val) => {
+                let value = val.max(0.0).min(255.0) as u8;
+                Rgb([value, value, value])
+            },
+            HexType::Debug2d((r,g)) => {
+                let red = r.max(0.0).min(255.0) as u8;
+                let green = g.max(0.0).min(255.0) as u8;
+                Rgb([red, green, 0])
+            }
         };
-        for i in 0..3 {
-            color.data[i] = (f32::from(color.data[i]) * color_diff) as u8;
+
+        // dont't randomize color of debug hexes
+        match hex.terrain_type {
+            HexType::Debug(_) | HexType::Debug2d(_) => {},
+            _ => {
+                for i in 0..3 {
+                    color.data[i] = (f32::from(color.data[i]) * color_diff) as u8;
+                }
+            }
         }
 
         self.render_polygon(&points, img, color);
+
+        if render_wrapped {
+            // subtract offset
+            for index in 0..6 {
+                points[index].0 -= width as f32 * self.multiplier;
+            };
+            self.render_polygon(&points, img, color);
+            // now add it back up
+            for index in 0..6 {
+                points[index].0 += 2.0 * width as f32 * self.multiplier;
+            };
+            self.render_polygon(&points, img, color);
+        }
     }
 }
 
 impl Default for Basic {
     fn default() -> Basic {
-        Basic{multiplier: 50.0}
+        Basic{multiplier: 50.0, wrap_map: true}
     }
 }
 
@@ -136,8 +166,12 @@ impl Renderer for Basic {
         let w = (map.absolute_size_x * self.multiplier) as u32;
         let h = (map.absolute_size_y * self.multiplier) as u32;
         let mut imgbuf = RgbImage::new(w,h);
-        for hex in &map.field {
-            self.render_hex(&mut imgbuf, hex);
+        for (index, hex) in map.field.iter().enumerate() {
+            self.render_hex(&mut imgbuf, hex, map.size_x, false);
+            // render only hexes on the sides, not the whole field
+            if self.wrap_map && (index as u32 % map.size_x == 0 || index as u32 % map.size_x == (map.size_x - 1)) {
+                self.render_hex(&mut imgbuf, hex, map.size_x, true);   
+            }
         }
         // Test polygon
         //self.render_polygon(&[(10.0, 10.0),(20.0, 400.0),(400.0, 10.0)], &mut imgbuf, Rgb([128,128,128]));
@@ -150,5 +184,9 @@ impl Renderer for Basic {
         } else {
             panic!("Invalid scale, only positive values accepted")
         }
+    }
+
+    fn set_wrap_map(&mut self, value: bool) {
+        self.wrap_map = value;
     }
 }

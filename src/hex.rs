@@ -182,6 +182,28 @@ impl HexType {
         map.insert(String::from("Jungle"), HexType::Jungle);
         map
     }
+
+    pub fn get_num_variants() -> usize {
+        12
+    }
+
+    pub fn get_by_index(index: usize) -> HexType {
+        match index {
+            0 => HexType::Field,
+            1 => HexType::Forest,
+            2 => HexType::Desert,
+            3 => HexType::Tundra,
+            4 => HexType::Water,
+            5 => HexType::Ocean,
+            6 => HexType::Mountain,
+            7 => HexType::Impassable,
+            8 => HexType::Ice,
+            9 => HexType::Jungle,
+            10 => HexType::Debug(0.5),
+            11 => HexType::Debug2d((0.5,0.5)),
+            _ => panic!("Hextype index out of range")
+        }
+    }
 }
 
 #[cfg(test)]

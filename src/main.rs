@@ -1,7 +1,7 @@
 use enigmap::{
     prelude::*,
     renderers::Basic,
-    generators::Islands
+    generators::Debug
 };
 
 use image::{RgbImage, ImageBuffer};
@@ -20,7 +20,7 @@ fn main() {
     let mut hexmap = HexMap::new(sizes.0, sizes.1);
 
     // generate map field
-    let mut gen = Islands::default();
+    let mut gen = Debug::default();
 
     set_seed(&mut gen);
 
