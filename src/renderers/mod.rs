@@ -5,6 +5,7 @@ use image::{RgbImage, ImageBuffer, Rgb};
 mod basic;
 mod ogl;
 mod sprite;
+pub mod colors;
 
 pub use self::basic::Basic;
 pub use self::ogl::OGL;

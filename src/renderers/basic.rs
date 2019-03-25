@@ -1,8 +1,10 @@
 use image::{RgbImage, ImageBuffer, Rgb};
+use rand::prelude::*;
+
 use crate::hexmap::HexMap;
 use crate::hex::{Hex, HexType};
 use crate::renderers::Renderer;
-use rand::prelude::*;
+use crate::renderers::colors::ColorMap;
 
 
 /// Software renderer
@@ -10,7 +12,10 @@ use rand::prelude::*;
 pub struct Basic {
     /// Size of `Hex` on X axis in pixels
     multiplier: f32,
-    wrap_map: bool
+    /// Should the map repeat on the X axis
+    wrap_map: bool,
+    /// Randomize colors slightly
+    randomize_colors: bool
 }
 
 impl Basic {
@@ -91,7 +96,7 @@ impl Basic {
         }
     }
 
-    fn render_hex(&self, img: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, hex: &Hex, width: u32, render_wrapped: bool) {
+    fn render_hex(&self, img: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, hex: &Hex, width: u32, colors: &ColorMap, render_wrapped: bool) {
         let mut rng = thread_rng();
         // randomize color a little bit
         let color_diff = rng.gen_range(0.98, 1.02);
@@ -105,33 +110,29 @@ impl Basic {
         };
 
         let mut color = match hex.terrain_type {
-            HexType::Water => Rgb([74, 128, 214]),
-            HexType::Field => Rgb([116, 191, 84]),
-            HexType::Ice => Rgb([202, 208, 209]),
-            HexType::Mountain => Rgb([77, 81, 81]),
-            HexType::Forest => Rgb([86, 161, 54]),
-            HexType::Ocean => Rgb([54, 108, 194]),
-            HexType::Tundra => Rgb([62, 81, 77]),
-            HexType::Desert => Rgb([214, 200, 109]),
-            HexType::Jungle => Rgb([64, 163, 16]),
-            HexType::Impassable => Rgb([140, 111, 83]),
             HexType::Debug(val) => {
-                let value = val.max(0.0).min(255.0) as u8;
+                let value = (val * 255.0).max(0.0).min(255.0) as u8;
                 Rgb([value, value, value])
             },
             HexType::Debug2d((r,g)) => {
-                let red = r.max(0.0).min(255.0) as u8;
-                let green = g.max(0.0).min(255.0) as u8;
+                let red = (r * 255.0).max(0.0).min(255.0) as u8;
+                let green = (g * 255.0).max(0.0).min(255.0) as u8;
                 Rgb([red, green, 0])
+            },
+            _ => {
+                let color = colors.get_color_u8(&hex.terrain_type);
+                Rgb([color.0, color.1, color.2])
             }
         };
 
         // dont't randomize color of debug hexes
-        match hex.terrain_type {
-            HexType::Debug(_) | HexType::Debug2d(_) => {},
-            _ => {
-                for i in 0..3 {
-                    color.data[i] = (f32::from(color.data[i]) * color_diff) as u8;
+        if self.randomize_colors {
+            match hex.terrain_type {
+                HexType::Debug(_) | HexType::Debug2d(_) => {},
+                _ => {
+                    for i in 0..3 {
+                        color.data[i] = (f32::from(color.data[i]) * color_diff) as u8;
+                    }
                 }
             }
         }
@@ -151,11 +152,15 @@ impl Basic {
             self.render_polygon(&points, img, color);
         }
     }
+
+    pub fn set_random_colors(&mut self, value: bool) {
+        self.randomize_colors = value;
+    }
 }
 
 impl Default for Basic {
     fn default() -> Basic {
-        Basic{multiplier: 50.0, wrap_map: true}
+        Basic{multiplier: 50.0, wrap_map: true, randomize_colors: true}
     }
 }
 
@@ -166,11 +171,12 @@ impl Renderer for Basic {
         let w = (map.absolute_size_x * self.multiplier) as u32;
         let h = (map.absolute_size_y * self.multiplier) as u32;
         let mut imgbuf = RgbImage::new(w,h);
+        let colors = ColorMap::new();
         for (index, hex) in map.field.iter().enumerate() {
-            self.render_hex(&mut imgbuf, hex, map.size_x, false);
+            self.render_hex(&mut imgbuf, hex, map.size_x, &colors, false);
             // render only hexes on the sides, not the whole field
             if self.wrap_map && (index as u32 % map.size_x == 0 || index as u32 % map.size_x == (map.size_x - 1)) {
-                self.render_hex(&mut imgbuf, hex, map.size_x, true);   
+                self.render_hex(&mut imgbuf, hex, map.size_x, &colors, true);   
             }
         }
         // Test polygon

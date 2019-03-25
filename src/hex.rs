@@ -3,6 +3,7 @@ use rand::{
     Rng
 };
 use std::collections::HashMap;
+use std::hash::{Hash, Hasher};
 use crate::hexmap::HexMap;
 
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -163,6 +164,33 @@ impl Distribution<HexType> for Standard {
             7 => HexType::Impassable,
             8 => HexType::Ice,
             _ => HexType::Jungle
+        }
+    }
+}
+
+impl Eq for HexType {}
+
+impl Hash for HexType {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        (i32::from(*self)).hash(state);
+    }
+}
+
+impl From<HexType> for i32 {
+    fn from(ht: HexType) -> i32 {
+        match ht {
+            HexType::Field => 0,
+            HexType::Forest => 1,
+            HexType::Desert => 2,
+            HexType::Tundra => 3,
+            HexType::Water => 4,
+            HexType::Ocean => 5,
+            HexType::Mountain => 6,
+            HexType::Impassable => 7,
+            HexType::Ice => 8,
+            HexType::Jungle => 9,
+            HexType::Debug(_) => 10,
+            HexType::Debug2d(_) => 11
         }
     }
 }
