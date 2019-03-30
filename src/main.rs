@@ -19,7 +19,6 @@ fn main() {
     // initialize map
     let mut hexmap = HexMap::new(sizes.0, sizes.1);
 
-
     // select generator
     let gen_choice = get_u32("generator choice (0 - circle, 1 - islands, 2 - geo, 3..inf - debug)", 0);
     let mut gen: Box<dyn MapGen> = match gen_choice {
@@ -53,7 +52,6 @@ fn main() {
     bencher(| | {
         gen.generate(&mut hexmap);
     }, "Generation", 10);
-
     
     let mut img: RgbImage = ImageBuffer::new(1,1);
 

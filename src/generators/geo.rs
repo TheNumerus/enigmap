@@ -41,7 +41,6 @@ impl Geo {
 
         let mut rng = StdRng::from_seed(self.seed_to_rng_seed(seed));
         let mut plates: Vec<(usize, HexType)> = Vec::with_capacity(self.num_plates as usize);
-        let mut noise: Vec<(f32, f32)> = vec![];
 
         // generate centers of plates
         for plate_num in 0..self.num_plates {
@@ -54,63 +53,13 @@ impl Geo {
         debug_println!("plate centers generated");
 
         // compute and blend noise on the left
-        for hex in &mut hexmap.field {
-            let scale = hexmap.absolute_size_x * 0.2;
-            let (mut noise_x, mut noise_y) = Geo::get_noise_val(seed, hex, &f, scale);
-
-            // blend noise on the left
-            if hex.center_x < (hexmap.size_x as f32 / 2.0) {
-                let left_hex = Hex::from_coords(hex.x + hexmap.size_x as i32, hex.y);
-                let (left_noise_x, left_noise_y) = Geo::get_noise_val(seed, &left_hex, &f, scale);
-                let blend = (hex.center_x - 0.5) / hexmap.size_x as f32;
-                let blend = f32::max(0.0, -2.0 * blend + 1.0);
-                noise_x = blend * left_noise_x + (1.0 - blend) * noise_x;
-                noise_y = blend * left_noise_y + (1.0 - blend) * noise_y;
-            }
-            // normalized
-            let len = (noise_x.powi(2) + noise_y.powi(2)).sqrt();
-            noise.push((noise_x / len, noise_y / len));
-        }
-
-        let get_cost = |hex0: &(f32, f32), hex1: &(f32, f32)| {
-            let dot = hex0.0 * hex1.0 + hex1.1 * hex0.1;
-            // original cost function
-            //let x = 0.2;
-            //let y = 3.0;
-            //let z = 0.9;
-            //let w = 2.0;
-            //f32::max(f32::min((x * (-dot + z)).ln() / w + y - dot, 10.0), 0.0)
-            
-            // aproximated cost function, around 6x faster
-            f32::max(f32::min(
-                -4.0 * (dot - 0.85),
-                -1.5 * (dot - 1.4)
-            ), 0.0001)
-        };
+        let noise = Geo::generate_noise(hexmap, seed, f);
         debug_println!("noise generated");
-        // generate plates
-        let mut costs: Vec<Vec<Option<f32>>> = vec![vec![None; plates.len()]; (hexmap.size_x * hexmap.size_y) as usize];
-        for (plate_num, (plate_index, _type)) in plates.iter().enumerate() {
-            let mut frontier: VecDeque<usize> = VecDeque::new();
-            frontier.push_front(*plate_index);
-            costs[*plate_index][plate_num] = Some(0.0);
-            while let Some(current) = frontier.pop_front() {
-                for (hex_x, hex_y) in hexmap.field[current].get_neighbours(&hexmap) {
-                    let index = hexmap.coords_to_index(hex_x, hex_y);
-                    let cost = costs[current][plate_num].unwrap() + get_cost(&noise[current], &noise[index]);
-                    costs[index][plate_num] = match costs[index][plate_num] {
-                        Some(val) if cost >= val => {
-                            continue
-                        },
-                        _ => {
-                            frontier.push_back(index);
-                            Some(cost)
-                        }
-                    };
-                }
-            }
-        }
+
+        // generate costs of movement between hexes
+        let costs = Geo::generate_costs(hexmap, &plates, &noise);
         debug_println!("plates generated");
+
         // asign hexes to plates
         let mut plate_stats = vec![0; self.num_plates as usize];
         for (index, hex_costs) in costs.iter().enumerate() {
@@ -126,113 +75,15 @@ impl Geo {
             plate_stats[final_index] += 1;
         }
         debug_println!("plates assigned");
+
         // delete small plates
-        let mut hexes_to_fill = 0;
-        let threshold = hexmap.size_x as f32 * hexmap.size_y as f32 * 0.005;
-        for hex in &mut hexmap.field {
-            for (index, plate) in plates.iter().enumerate() {
-                if hex.terrain_type == plate.1 && (plate_stats[index] as f32) < threshold {
-                    // using water as a placeholder
-                    hex.terrain_type = HexType::Water;
-                    hexes_to_fill += 1;
-                    plate_stats[index] -= 1;
-                }
-            }
-        }
-        // delete orphan islands
-        for (plate_num, (plate_index, plate_type)) in plates.iter().enumerate() {
-            // handle deleted islands
-            if plate_stats[plate_num] == 0 {
-                continue;
-            }
-            let mut frontier: VecDeque<usize> = VecDeque::new();
-            frontier.push_front(*plate_index);
-            let mut neighbours: Vec<bool> = vec![false; self.num_plates as usize];
-            let mut neighbours_num = 0;
-            let mut visited: Vec<bool> = vec![false; (hexmap.size_x * hexmap.size_y) as usize];
-            visited[*plate_index] = true;
-            while let Some(current) = frontier.pop_front() {
-                for (hex_x, hex_y) in hexmap.field[current].get_neighbours(&hexmap) {
-                    let index = hexmap.coords_to_index(hex_x, hex_y);
-                    let neighbour_type = hexmap.field[index].terrain_type;
-                    if neighbour_type == *plate_type {
-                        if !visited[index] {
-                            frontier.push_back(index);
-                            visited[index] = true;
-                        }
-                        continue;
-                    }
-                    // find neighbour plate index
-                    let mut neighbour_plate_index = 0;
-                    for (index, (_plate_center, terrain_type)) in plates.iter().enumerate() {
-                        if *terrain_type == neighbour_type {
-                            neighbour_plate_index = index;
-                            break;
-                        }
-                    }
-                    // skip if this hex has the same type as center
-                    if !neighbours[neighbour_plate_index] {
-                        neighbours[neighbour_plate_index] = true;
-                        neighbours_num += 1;
-                    }
-                }
-            }
-            // only one neighbour => island
-            if neighbours_num == 1 {
-                for hex in &mut hexmap.field {
-                    if hex.terrain_type == *plate_type {
-                        hex.terrain_type = HexType::Water;
-                        hexes_to_fill += 1;
-                        plate_stats[plate_num] -= 1;
-                    }
-                }
-            }
-        }
+        let hexes_to_fill = self.clear_plates(&mut plates, &mut plate_stats, hexmap);
         debug_println!("plates cleaned");
+
         // now fill holes
-        while hexes_to_fill != 0 {
-            let oldmap = hexmap.clone();
-            let mut neighbours: Vec<u32>;
-            for (index, hex) in hexmap.field.iter_mut().enumerate() {
-                // skip non-placeholder tiles
-                match hex.terrain_type {
-                    HexType::Water => {},
-                    _ => continue
-                };
-                neighbours = vec![0; self.num_plates as usize];
-                // check neighbour types
-                for (hex_x, hex_y) in oldmap.field[index].get_neighbours(&oldmap) {
-                    let index = oldmap.coords_to_index(hex_x, hex_y);
-                    let neighbour_type = oldmap.field[index].terrain_type;
-                    if let HexType::Water = neighbour_type {
-                        continue;
-                    }
-                    // find neighbour plate index
-                    let mut neighbour_plate_index = 0;
-                    for (index, (_plate_center, terrain_type)) in plates.iter().enumerate() {
-                        if *terrain_type == neighbour_type {
-                            neighbour_plate_index = index;
-                            break;
-                        }
-                    }
-                    neighbours[neighbour_plate_index] += 1;
-                }
-                // get most used neighbour
-                let mut max_num = 0;
-                let mut max_num_index = 0;
-                for (index, num) in neighbours.iter().enumerate() {
-                    if max_num < *num {
-                        max_num = *num;
-                        max_num_index = index
-                    }
-                }
-                if max_num > 1 {
-                    hex.terrain_type = plates[max_num_index].1;
-                    hexes_to_fill -= 1;
-                }
-            }
-        }
+        self.fill_small_plates(hexmap, &plates, hexes_to_fill);
         debug_println!("plates filled");
+
         // now return generated values
         let mut indices: Vec<(usize, usize)> = vec!();
         let mut directions: Vec<(f32, f32)> = vec!();
@@ -441,6 +292,180 @@ impl Geo {
                 hex.terrain_type = HexType::Mountain;
             } else {
                 hex.terrain_type = HexType::Field;
+            }
+        }
+    }
+
+    fn generate_noise<T>(hexmap: &HexMap, seed: u32, noise_gen: T) -> Vec<(f32, f32)> 
+    where T: NoiseFn<[f64; 2]> {
+        let mut noise = Vec::with_capacity(hexmap.get_area() as usize);
+        for hex in &hexmap.field {
+            let scale = hexmap.absolute_size_x * 0.2;
+            let (mut noise_x, mut noise_y) = Geo::get_noise_val(seed, hex, &noise_gen, scale);
+
+            // blend noise on the left
+            if hex.center_x < (hexmap.size_x as f32 / 2.0) {
+                let left_hex = Hex::from_coords(hex.x + hexmap.size_x as i32, hex.y);
+                let (left_noise_x, left_noise_y) = Geo::get_noise_val(seed, &left_hex, &noise_gen, scale);
+                let blend = (hex.center_x - 0.5) / hexmap.size_x as f32;
+                let blend = f32::max(0.0, -2.0 * blend + 1.0);
+                noise_x = blend * left_noise_x + (1.0 - blend) * noise_x;
+                noise_y = blend * left_noise_y + (1.0 - blend) * noise_y;
+            }
+            // normalized
+            let len = (noise_x.powi(2) + noise_y.powi(2)).sqrt();
+            noise.push((noise_x / len, noise_y / len));
+        }
+        noise
+    }
+
+    fn generate_costs(hexmap: &HexMap, plates: &[(usize, HexType)], noise: &[(f32, f32)])  -> Vec<Vec<Option<f32>>> {
+        let get_cost = |hex0: &(f32, f32), hex1: &(f32, f32)| {
+            let dot = hex0.0 * hex1.0 + hex1.1 * hex0.1;
+            // original cost function
+            //let x = 0.2;
+            //let y = 3.0;
+            //let z = 0.9;
+            //let w = 2.0;
+            //f32::max(f32::min((x * (-dot + z)).ln() / w + y - dot, 10.0), 0.0)
+            
+            // aproximated cost function, around 6x faster
+            f32::max(f32::min(
+                -4.0 * (dot - 0.85),
+                -1.5 * (dot - 1.4)
+            ), 0.0001)
+        };
+        let mut costs: Vec<Vec<Option<f32>>> = vec![vec![None; plates.len()]; (hexmap.size_x * hexmap.size_y) as usize];
+        for (plate_num, (plate_index, _type)) in plates.iter().enumerate() {
+            let mut frontier: VecDeque<usize> = VecDeque::new();
+            frontier.push_front(*plate_index);
+            costs[*plate_index][plate_num] = Some(0.0);
+            while let Some(current) = frontier.pop_front() {
+                for (hex_x, hex_y) in hexmap.field[current].get_neighbours(&hexmap) {
+                    let index = hexmap.coords_to_index(hex_x, hex_y);
+                    let cost = costs[current][plate_num].unwrap() + get_cost(&noise[current], &noise[index]);
+                    costs[index][plate_num] = match costs[index][plate_num] {
+                        Some(val) if cost >= val => {
+                            continue
+                        },
+                        _ => {
+                            frontier.push_back(index);
+                            Some(cost)
+                        }
+                    };
+                }
+            }
+        }
+        costs
+    }
+
+    fn clear_plates(&self, plates: &mut[(usize, HexType)], plate_stats: &mut[usize], hexmap: &mut HexMap) -> usize {
+        // delete small plates
+        let mut hexes_to_fill = 0;
+        let threshold = hexmap.size_x as f32 * hexmap.size_y as f32 * 0.005;
+        for hex in &mut hexmap.field {
+            for (index, plate) in plates.iter().enumerate() {
+                if hex.terrain_type == plate.1 && (plate_stats[index] as f32) < threshold {
+                    // using water as a placeholder
+                    hex.terrain_type = HexType::Water;
+                    hexes_to_fill += 1;
+                    plate_stats[index] -= 1;
+                }
+            }
+        }
+        // delete orphan islands
+        for (plate_num, (plate_index, plate_type)) in plates.iter().enumerate() {
+            // handle deleted islands
+            if plate_stats[plate_num] == 0 {
+                continue;
+            }
+            let mut frontier: VecDeque<usize> = VecDeque::new();
+            frontier.push_front(*plate_index);
+            let mut neighbours: Vec<bool> = vec![false; self.num_plates as usize];
+            let mut neighbours_num = 0;
+            let mut visited: Vec<bool> = vec![false; (hexmap.size_x * hexmap.size_y) as usize];
+            visited[*plate_index] = true;
+            while let Some(current) = frontier.pop_front() {
+                for (hex_x, hex_y) in hexmap.field[current].get_neighbours(&hexmap) {
+                    let index = hexmap.coords_to_index(hex_x, hex_y);
+                    let neighbour_type = hexmap.field[index].terrain_type;
+                    if neighbour_type == *plate_type {
+                        if !visited[index] {
+                            frontier.push_back(index);
+                            visited[index] = true;
+                        }
+                        continue;
+                    }
+                    // find neighbour plate index
+                    let mut neighbour_plate_index = 0;
+                    for (index, (_plate_center, terrain_type)) in plates.iter().enumerate() {
+                        if *terrain_type == neighbour_type {
+                            neighbour_plate_index = index;
+                            break;
+                        }
+                    }
+                    // skip if this hex has the same type as center
+                    if !neighbours[neighbour_plate_index] {
+                        neighbours[neighbour_plate_index] = true;
+                        neighbours_num += 1;
+                    }
+                }
+            }
+            // only one neighbour => island
+            if neighbours_num == 1 {
+                for hex in &mut hexmap.field {
+                    if hex.terrain_type == *plate_type {
+                        hex.terrain_type = HexType::Water;
+                        hexes_to_fill += 1;
+                        plate_stats[plate_num] -= 1;
+                    }
+                }
+            }
+        }
+        hexes_to_fill
+    }
+
+    fn fill_small_plates(&self, hexmap: &mut HexMap, plates: &[(usize, HexType)], mut hexes_to_fill: usize) {
+        while hexes_to_fill != 0 {
+            let oldmap = hexmap.clone();
+            let mut neighbours: Vec<u32>;
+            for (index, hex) in hexmap.field.iter_mut().enumerate() {
+                // skip non-placeholder tiles
+                match hex.terrain_type {
+                    HexType::Water => {},
+                    _ => continue
+                };
+                neighbours = vec![0; self.num_plates as usize];
+                // check neighbour types
+                for (hex_x, hex_y) in oldmap.field[index].get_neighbours(&oldmap) {
+                    let index = oldmap.coords_to_index(hex_x, hex_y);
+                    let neighbour_type = oldmap.field[index].terrain_type;
+                    if let HexType::Water = neighbour_type {
+                        continue;
+                    }
+                    // find neighbour plate index
+                    let mut neighbour_plate_index = 0;
+                    for (index, (_plate_center, terrain_type)) in plates.iter().enumerate() {
+                        if *terrain_type == neighbour_type {
+                            neighbour_plate_index = index;
+                            break;
+                        }
+                    }
+                    neighbours[neighbour_plate_index] += 1;
+                }
+                // get most used neighbour
+                let mut max_num = 0;
+                let mut max_num_index = 0;
+                for (index, num) in neighbours.iter().enumerate() {
+                    if max_num < *num {
+                        max_num = *num;
+                        max_num_index = index
+                    }
+                }
+                if max_num > 1 {
+                    hex.terrain_type = plates[max_num_index].1;
+                    hexes_to_fill -= 1;
+                }
             }
         }
     }
