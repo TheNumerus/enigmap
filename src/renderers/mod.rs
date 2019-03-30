@@ -21,9 +21,6 @@ pub trait Renderer {
     /// Set scale of rendered hexagons
     fn set_scale(&mut self, scale: f32);
 
-    /// Constant for tile sizes
-    const TILE_SIZE: u32;
-
     /// Returns `Hex` vertex positon in relative (non-multiplied) coordinates
     /// 
     /// Index starts on upper right vertex and continues clockwise
@@ -34,7 +31,7 @@ pub trait Renderer {
     //  4     0
     //  3     1
     //     2
-    fn get_hex_vertex(hex: &Hex, index: usize) -> (f32, f32) {
+    fn get_hex_vertex(&self, hex: &Hex, index: usize) -> (f32, f32) {
         if index > 5 {
             panic!("index out of range")
         }
@@ -58,17 +55,17 @@ pub trait Renderer {
     }
 
     /// Returns image generated from tiles
-    fn tiles_to_image(&self, tiles: &[Vec<u8>], map: &HexMap, multiplier: f32, fix_gamma: bool) -> ImageBuffer<Rgb<u8>, Vec<u8>> {
-        let tiles_x = ((map.absolute_size_x * multiplier) / Self::TILE_SIZE as f32).ceil() as u32;
+    fn tiles_to_image(&self, tiles: &[Vec<u8>], map: &HexMap, multiplier: f32, fix_gamma: bool, tile_size: u32) -> ImageBuffer<Rgb<u8>, Vec<u8>> {
+        let tiles_x = ((map.absolute_size_x * multiplier) / tile_size as f32).ceil() as u32;
         let target_size_x = (map.absolute_size_x * multiplier) as u32;
         let target_size_y = (map.absolute_size_y * multiplier) as u32;
         let imgbuf: ImageBuffer<Rgb<u8>, Vec<u8>> = ImageBuffer::from_fn(target_size_x, target_size_y, |x, y| {
-            let tile_x = x / Self::TILE_SIZE;
-            let tile_y = y / Self::TILE_SIZE;
+            let tile_x = x / tile_size;
+            let tile_y = y / tile_size;
             let tile_idx = (tile_x + tile_y * tiles_x) as usize;
-            let x = x - tile_x * Self::TILE_SIZE;
-            let y = y - tile_y * Self::TILE_SIZE;
-            let index = 4 * (x + y * Self::TILE_SIZE) as usize;
+            let x = x - tile_x * tile_size;
+            let y = y - tile_y * tile_size;
+            let index = 4 * (x + y * tile_size) as usize;
             // remove alpha channel
             if fix_gamma {
                 let r = (tiles[tile_idx][index] as f32 / 255.0).powf(2.2) * 255.0;

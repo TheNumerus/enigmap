@@ -4,7 +4,7 @@ use noise::{Fbm, NoiseFn, Seedable, Worley, Perlin};
 use std::f32;
 
 use crate::hexmap::HexMap;
-use crate::hex::{Hex, HexType};
+use crate::hex::HexType;
 use crate::generators::MapGen;
 
 /// Generator that generates multiple islands
@@ -62,7 +62,7 @@ impl Islands {
 
         // create bigger landmasses
         // choose random points at centers of those landmasses
-        let mut rng = StdRng::from_seed(Islands::seed_to_rng_seed(seed));
+        let mut rng = StdRng::from_seed(self.seed_to_rng_seed(seed));
         for _ in 0..3 {
             // get first focus
             let x: f32 = rng.gen_range(0.0, hex_map.absolute_size_x);
@@ -110,7 +110,7 @@ impl Islands {
         where T:NoiseFn<[f64; 2]>
     {
 
-        let mut rng = StdRng::from_seed(Islands::seed_to_rng_seed(seed));
+        let mut rng = StdRng::from_seed(self.seed_to_rng_seed(seed));
         for hex in &mut hex_map.field {
             // skip everything thats not land and generate mountains
             match hex.terrain_type {
@@ -196,7 +196,7 @@ impl Islands {
     fn ocean_pass<T>(&self, hex_map: &mut HexMap, gen: &T, noise_scale: f64, seed: u32)
         where T:NoiseFn<[f64; 2]>
     {
-        let mut old_field: Vec<Hex> = Vec::new();
+        let mut old_field = Vec::new();
         for hex in &mut hex_map.field {
             match hex.terrain_type {
                 HexType::Water | HexType::Ice | HexType::Ocean => continue,
@@ -209,7 +209,7 @@ impl Islands {
                 HexType::Water => {}, 
                 _ => continue
             };
-            let mut dst_to_land = i32::max_value();
+            let mut dst_to_land = u32::max_value();
             let noise_val = gen.get([hex.center_x as f64 * noise_scale + seed as f64, hex.center_y as f64 * noise_scale]);
             // get distance to land
             for other in &old_field {
@@ -222,8 +222,9 @@ impl Islands {
             if dst_to_land > 5 || noise_val < 0.14 {
                 hex.terrain_type = HexType::Ocean;
             }
+
             // make sure we have at least one tile
-            if dst_to_land < 2 {
+            if dst_to_land == 1 {
                 hex.terrain_type = HexType::Water;
             }
         }
@@ -258,6 +259,8 @@ impl Default for Islands {
 
 impl MapGen for Islands {
     fn generate(&self, hex_map: &mut HexMap) {
+        hex_map.clean_up();
+
         // init generators
         let w = Worley::new();
         let f = Fbm::new();

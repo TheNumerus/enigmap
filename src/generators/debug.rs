@@ -17,7 +17,7 @@ impl Default for Debug {
 impl MapGen for Debug {
     fn generate(&self, hex_map: &mut HexMap) {
         for (index, hex) in hex_map.field.iter_mut().enumerate() {
-            hex.terrain_type = HexType::get_by_index((index/hex_map.size_x as usize/2) % HexType::get_num_variants());
+            hex.terrain_type = HexType::from(((index/hex_map.size_x as usize/2) % HexType::get_num_variants()) as i32);
         }
 
         // update debug colors

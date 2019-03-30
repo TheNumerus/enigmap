@@ -39,7 +39,7 @@ impl Geo {
     fn generate_plates(&self, hexmap: &mut HexMap, seed: u32) -> Plates {
         let f = Fbm::new();
 
-        let mut rng = StdRng::from_seed(Geo::seed_to_rng_seed(seed));
+        let mut rng = StdRng::from_seed(self.seed_to_rng_seed(seed));
         let mut plates: Vec<(usize, HexType)> = Vec::with_capacity(self.num_plates as usize);
         let mut noise: Vec<(f32, f32)> = vec![];
 
@@ -286,7 +286,7 @@ impl Geo {
                 particles.push((x as f32 / grid as f32, y as f32 / grid as f32));
             }
         }
-        let mut rng = StdRng::from_seed(Geo::seed_to_rng_seed(seed));
+        let mut rng = StdRng::from_seed(self.seed_to_rng_seed(seed));
 
         for _ in 0..self.particle_iterations {
             for particle in &mut particles {
@@ -454,6 +454,8 @@ impl Default for Geo {
 
 impl MapGen for Geo {
     fn generate(&self, hexmap: &mut HexMap) {
+        hexmap.clean_up();
+
         let seed = if self.using_seed {
             self.seed
         } else {

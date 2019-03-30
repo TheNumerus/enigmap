@@ -105,7 +105,7 @@ impl Basic {
         // points need to be in counter clockwise order
         let mut points = [(0.0, 0.0);6];
         for index in 0..6 {
-            let coords = Basic::get_hex_vertex(hex, index);
+            let coords = self.get_hex_vertex(hex, index);
             points[5 - index] = (coords.0 * self.multiplier, coords.1 * self.multiplier);
         };
 
@@ -165,8 +165,6 @@ impl Default for Basic {
 }
 
 impl Renderer for Basic {
-    const TILE_SIZE: u32 = 0;
-
     fn render(&self, map: &HexMap) -> RgbImage {
         let w = (map.absolute_size_x * self.multiplier) as u32;
         let h = (map.absolute_size_y * self.multiplier) as u32;

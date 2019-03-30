@@ -11,7 +11,7 @@ pub struct Circle {
     pub ring_size: f32,
     pub ice_falloff: f32,
     pub mountain_percentage: f32,
-    pub ocean_distance: i32,
+    pub ocean_distance: u32,
     seed: u32,
     using_seed: bool,
 }
@@ -24,11 +24,15 @@ impl Default for Circle {
 
 impl MapGen for Circle {
     fn generate(&self, hex_map: &mut HexMap) {
-        println!("WARNING! This generator is not yet seedable.");
+        hex_map.clean_up();
+
         // noise generator
         let p = Perlin::new();
-        let seed = random::<u32>();
-        //println!("{:?}", seed);
+        let seed = if self.using_seed {
+            self.seed
+        } else {
+            random::<u32>()
+        };
         p.set_seed(seed);
 
         for hex in &mut hex_map.field {
@@ -65,21 +69,25 @@ impl MapGen for Circle {
         }
         
         // oceans
-        let old_field = hex_map.field.clone();
+        let old_field = hex_map.clone();
         for hex in &mut hex_map.field {
             // skip everything thats not water
             match hex.terrain_type {
                 HexType::Water => {}, 
                 _ => continue
             };
-            let mut dst_to_land = i32::max_value();
-            for other in &old_field {
+            let mut dst_to_land = u32::max_value();
+            for (coord_x, coord_y) in &hex.get_spiral(&old_field, self.ocean_distance) {
+                let other = old_field.get_hex(*coord_x, *coord_y);
                 match other.terrain_type {
                     HexType::Water | HexType::Ice | HexType::Ocean => {},
                     _ => {
                         let dst = hex.distance_to(&other);
                         if dst < dst_to_land {
                             dst_to_land = dst;
+                        }
+                        if dst > self.ocean_distance {
+                            break
                         }
                     }
                 };

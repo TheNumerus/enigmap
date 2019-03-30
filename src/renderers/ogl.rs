@@ -16,17 +16,19 @@ pub struct OGL {
     /// Should the map repeat on the X axis
     wrap_map: bool,
     /// Randomize colors slightly
-    randomize_colors: bool
+    randomize_colors: bool,
+    /// Size of tiles rendered
+    tile_size: u32
 }
 
 impl OGL {
     /// Returns `Vec` of arranged `Hex` vertices
-    fn get_hex_points(hex: &Hex) -> Vec<Vertex> {
+    fn get_hex_points(&self, hex: &Hex) -> Vec<Vertex> {
         let mut verts: Vec<Vertex> = Vec::new();
         // divide hex into 4 triangles
         let indices = [5,4,0,3,1,2];
         for &i in indices.iter() {
-            verts.push(Vertex::from_tupple(OGL::get_hex_vertex(hex, i)));
+            verts.push(Vertex::from_tupple(self.get_hex_vertex(hex, i)));
         }
         verts
     }
@@ -37,15 +39,14 @@ impl OGL {
 }
 
 impl Renderer for OGL {
-    const TILE_SIZE: u32 = 1024;
 
     fn render(&self, map: &HexMap) -> RgbImage {
         let colors = ColorMap::new();
 
-        let w = OGL::TILE_SIZE as f64;
+        let w = self.tile_size as f64;
         let h = w;
-        let tiles_x = ((map.absolute_size_x * self.multiplier) / OGL::TILE_SIZE as f32).ceil() as u32;
-        let tiles_y = ((map.absolute_size_y * self.multiplier) / OGL::TILE_SIZE as f32).ceil() as u32;
+        let tiles_x = ((map.absolute_size_x * self.multiplier) / self.tile_size as f32).ceil() as u32;
+        let tiles_y = ((map.absolute_size_y * self.multiplier) / self.tile_size as f32).ceil() as u32;
 
         let events_loop = glutin::EventsLoop::new();
         let size = glutin::dpi::LogicalSize::new(w, h);
@@ -57,7 +58,7 @@ impl Renderer for OGL {
 
         let mut rng = thread_rng();
 
-        let shape: Vec<Vertex> = OGL::get_hex_points(&map.field[0]);
+        let shape: Vec<Vertex> = self.get_hex_points(&map.field[0]);
         implement_vertex!(Vertex, position);
         let vertex_buffer = VertexBuffer::new(&display, &shape).unwrap();
 
@@ -131,7 +132,7 @@ impl Renderer for OGL {
                 let uniforms = uniform! {
                     total_x: map.absolute_size_x,
                     total_y: map.absolute_size_y,
-                    win_size: OGL::TILE_SIZE as f32,
+                    win_size: self.tile_size as f32,
                     mult: self.multiplier,
                     tile_x: x as f32,
                     tile_y: y as f32
@@ -147,7 +148,7 @@ impl Renderer for OGL {
             }
         }
         debug_println!("tiles rendered");
-        DynamicImage::ImageRgb8(self.tiles_to_image(&tiles, map, self.multiplier, true)).to_rgb()
+        DynamicImage::ImageRgb8(self.tiles_to_image(&tiles, map, self.multiplier, true, self.tile_size)).to_rgb()
     }
 
     fn set_scale(&mut self, scale: f32) {
@@ -165,7 +166,7 @@ impl Renderer for OGL {
 
 impl Default for OGL {
     fn default() -> OGL {
-        OGL{multiplier: 50.0, wrap_map: true, randomize_colors: true}
+        OGL{multiplier: 50.0, wrap_map: true, randomize_colors: true, tile_size: 1024}
     }
 }
 
