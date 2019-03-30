@@ -3,10 +3,12 @@ use crate::hexmap::HexMap;
 mod circle;
 mod islands;
 mod geo;
+mod debug;
 
 pub use self::circle::Circle;
 pub use self::islands::Islands;
 pub use self::geo::Geo;
+pub use self::debug::Debug;
 
 /// Trait for map generators
 /// 
@@ -19,7 +21,7 @@ pub trait MapGen {
     fn set_seed(&mut self, seed: u32);
 
     /// Converts `u32` seed into `[u8; 32]` which the rng generator uses
-    fn seed_to_rng_seed(seed: u32) -> [u8; 32] {
+    fn seed_to_rng_seed(&self, seed: u32) -> [u8; 32] {
         let mut seed_copy = seed;
         let mut array: [u8; 32] = [0; 32];
         for i in 0..32 {

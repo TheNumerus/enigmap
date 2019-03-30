@@ -21,3 +21,7 @@ harness = false
 [[bench]]
 name = "hexmap"
 harness = false
+
+[[bench]]
+name = "renderers"
+harness = false

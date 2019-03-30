@@ -1,7 +1,7 @@
 use enigmap::{
     prelude::*,
-    renderers::Sprite,
-    generators::Islands
+    renderers::{Basic, OGL, Sprite},
+    generators::{Circle, Islands, Geo, Debug}
 };
 
 use image::{RgbImage, ImageBuffer};
@@ -19,21 +19,45 @@ fn main() {
     // initialize map
     let mut hexmap = HexMap::new(sizes.0, sizes.1);
 
+
+    // select generator
+    let gen_choice = get_u32("generator choice (0 - circle, 1 - islands, 2 - geo, 3..inf - debug)", 0);
+    let mut gen: Box<dyn MapGen> = match gen_choice {
+        0 => Box::new(Circle::default()),
+        1 => Box::new(Islands::default()),
+        2 => Box::new(Geo::default()),
+        3 | _ => Box::new(Debug::default()),
+    };
+
+    // get seed
+    println!("Please input seed: ");
+    let mut seed = String::new();
+
+    io::stdin().read_line(&mut seed).expect("Failed to read line");
+
+    match seed.trim().parse() {
+        Ok(some) => gen.set_seed(some),
+        Err(_) => println!("Not a number, using random seed"),
+    }
+
+    // select renderer
+    let ren_choice = get_u32("renderer choice (0 - basic, 1 - OGL, 2..inf - sprite)", 0);
+    let mut renderer: Box<dyn Renderer> = match ren_choice {
+        0 => Box::new(Basic::default()),
+        1 => Box::new(OGL::default()),
+        2 | _ => Box::new(Sprite::from_folder("./textures"))
+    };
+    renderer.set_scale(10.0);
+
     // generate map field
-    let mut gen = Islands::default();
-
-    set_seed(&mut gen);
-
     bencher(| | {
         gen.generate(&mut hexmap);
-    }, "Generation", 1);
+    }, "Generation", 10);
 
-    // render image
-    let mut renderer = Sprite::from_folder("./textures");
-    renderer.set_scale(100.0);
     
     let mut img: RgbImage = ImageBuffer::new(1,1);
 
+    // render image
     bencher(| | {
         img = renderer.render(&hexmap);
     }, "Rendering", 1);
@@ -48,21 +72,6 @@ fn main() {
     bencher(| | {
         img.save("./out/image.png").unwrap();
     }, "Saving", 1);
-}
-
-
-fn set_seed<T>(gen: &mut T)
-    where T: MapGen
-{
-    println!("Please input seed: ");
-    let mut seed = String::new();
-
-    io::stdin().read_line(&mut seed).expect("Failed to read line");
-
-    match seed.trim().parse() {
-        Ok(some) => gen.set_seed(some),
-        Err(_) => println!("Not a number, using random seed"),
-    }
 }
 
 fn get_u32(name: &str, default: u32) -> u32 {

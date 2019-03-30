@@ -1,5 +1,5 @@
 use std::f32;
-use crate::hex::{RATIO, Hex};
+use crate::hex::{RATIO, Hex, HexType};
 
 #[derive(Debug, Clone)]
 /// Base data structure for generated map
@@ -99,6 +99,30 @@ impl HexMap {
     pub fn get_closest_hex_index_wrapped(&self, x: f32, y: f32) -> usize {
         // TODO
         self.get_closest_hex_index(x,y)
+    }
+
+    /// Returns refrence to hex, does not check out of range hexes
+    pub fn get_hex(&self, x: i32, y: i32) -> &Hex {
+        let index = self.coords_to_index(x, y);
+        &self.field[index]
+    }
+
+    /// Returns mutable refrence to hex, does not check out of range hexes
+    pub fn get_hex_mut(&mut self, x: i32, y: i32) -> &mut Hex {
+        let index = self.coords_to_index(x, y);
+        &mut self.field[index]
+    }
+
+    /// Sets hex value
+    pub fn set_hex(&mut self, x: i32, y: i32, hex: Hex) {
+        let index = self.coords_to_index(x, y);
+        self.field[index] = hex
+    }
+
+    pub fn clean_up(&mut self) {
+        for hex in &mut self.field {
+            hex.terrain_type = HexType::Water;
+        }
     }
 }
 

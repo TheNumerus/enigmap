@@ -28,6 +28,8 @@ pub struct Sprite {
     /// Path to folder with textures
     texture_folder: String,
 
+    tile_size: u32,
+
     random_rotation: Setting,
     random_color: Setting,
     render_in_25d: Setting,
@@ -36,21 +38,17 @@ pub struct Sprite {
 
 impl Sprite {
     /// Returns `Vec` of arranged `Hex` vertices
-    fn get_hex_points(hex: &Hex) -> Vec<Vertex> {
+    fn get_hex_points(&self, hex: &Hex) -> Vec<Vertex> {
         let mut verts: Vec<Vertex> = Vec::new();
         // divide hex into 4 triangles
         let indices = [5,4,0,3,1,2];
         for &i in indices.iter() {
-            let vert_pos = Sprite::get_hex_vertex(hex, i);
+            let vert_pos = self.get_hex_vertex(hex, i);
             let vert_pos = (vert_pos.0, vert_pos.1, 0.0);
             let tex_coords = ((vert_pos.0 - 0.5) / RATIO + 0.5, 1.0 - vert_pos.1 / RATIO);
             verts.push(Vertex::from_tupples(vert_pos, tex_coords));
         }
         verts
-    }
-    /// Should the map repeat on the X axis
-    pub fn set_wrap_map(&mut self, value: bool) {
-        self.wrap_map = value;
     }
 
     /// Creates new instance of Sprite using specified folder as a source of textures
@@ -66,7 +64,8 @@ impl Sprite {
             random_color: Setting::None,
             random_rotation: Setting::All,
             render_in_25d: Setting::None,
-            variations: empty_variations
+            variations: empty_variations,
+            tile_size: 1024
         };
         // check for path
         if !Path::new(folder).exists() {
@@ -250,13 +249,11 @@ impl Sprite {
 }
 
 impl Renderer for Sprite {
-    const TILE_SIZE: u32 = 1024;
-
     fn render(&self, map: &HexMap) -> RgbImage {
-        let w = Sprite::TILE_SIZE as f64;
+        let w = self.tile_size as f64;
         let h = w;
-        let tiles_x = ((map.absolute_size_x * self.multiplier) / Sprite::TILE_SIZE as f32).ceil() as u32;
-        let tiles_y = ((map.absolute_size_y * self.multiplier) / Sprite::TILE_SIZE as f32).ceil() as u32;
+        let tiles_x = ((map.absolute_size_x * self.multiplier) / self.tile_size as f32).ceil() as u32;
+        let tiles_y = ((map.absolute_size_y * self.multiplier) / self.tile_size as f32).ceil() as u32;
 
         let events_loop = glutin::EventsLoop::new();
         let size = glutin::dpi::LogicalSize::new(w, h);
@@ -270,7 +267,7 @@ impl Renderer for Sprite {
 
         implement_vertex!(Vertex, position, tex_coords);
 
-        let shape: Vec<Vertex> = Sprite::get_hex_points(&map.field[0]);
+        let shape: Vec<Vertex> = self.get_hex_points(&map.field[0]);
         let vertex_buffer = VertexBuffer::new(&display, &shape).unwrap();
 
         let shape_cover: Vec<Vertex> = Sprite::get_cover_shape();
@@ -405,7 +402,7 @@ impl Renderer for Sprite {
                     let uniforms = uniform! {
                         total_x: map.absolute_size_x,
                         total_y: map.absolute_size_y,
-                        win_size: Sprite::TILE_SIZE as f32,
+                        win_size: self.tile_size as f32,
                         mult: self.multiplier,
                         tile_x: x as f32,
                         tile_y: y as f32,
@@ -420,7 +417,7 @@ impl Renderer for Sprite {
                     let uniforms = uniform! {
                         total_x: map.absolute_size_x,
                         total_y: map.absolute_size_y,
-                        win_size: Sprite::TILE_SIZE as f32,
+                        win_size: self.tile_size as f32,
                         mult: self.multiplier,
                         tile_x: x as f32,
                         tile_y: y as f32,
@@ -446,7 +443,7 @@ impl Renderer for Sprite {
             }
         }
         debug_println!("tiles rendered");
-        DynamicImage::ImageRgb8(self.tiles_to_image(&tiles, map, self.multiplier, true)).to_rgb()
+        DynamicImage::ImageRgb8(self.tiles_to_image(&tiles, map, self.multiplier, true, self.tile_size)).to_rgb()
     }
 
     fn set_scale(&mut self, scale: f32) {
@@ -455,6 +452,10 @@ impl Renderer for Sprite {
         } else {
             panic!("Invalid scale, only positive values accepted")
         }
+    }
+
+    fn set_wrap_map(&mut self, value: bool) {
+        self.wrap_map = value;
     }
 }
 

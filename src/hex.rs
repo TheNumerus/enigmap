@@ -3,6 +3,7 @@ use rand::{
     Rng
 };
 use std::collections::HashMap;
+use std::hash::{Hash, Hasher};
 use crate::hexmap::HexMap;
 
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -36,8 +37,8 @@ impl Hex {
     }
 
     /// Returns dstance to other `Hex`
-    pub fn distance_to(&self, other: &Hex) -> i32 {
-        ((self.x - other.x).abs() + (self.x + self.y - other.x - other.y).abs() + (self.y - other.y).abs()) / 2
+    pub fn distance_to(&self, other: &Hex) -> u32 {
+        ((self.x - other.x).abs() + (self.x + self.y - other.x - other.y).abs() + (self.y - other.y).abs()) as u32 / 2
     }
 
     /// Returns vector of `Hex` tiles next to specified `Hex`
@@ -167,6 +168,53 @@ impl Distribution<HexType> for Standard {
     }
 }
 
+impl Eq for HexType {}
+
+impl Hash for HexType {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        (i32::from(*self)).hash(state);
+    }
+}
+
+impl From<HexType> for i32 {
+    fn from(ht: HexType) -> i32 {
+        match ht {
+            HexType::Field => 0,
+            HexType::Forest => 1,
+            HexType::Desert => 2,
+            HexType::Tundra => 3,
+            HexType::Water => 4,
+            HexType::Ocean => 5,
+            HexType::Mountain => 6,
+            HexType::Impassable => 7,
+            HexType::Ice => 8,
+            HexType::Jungle => 9,
+            HexType::Debug(_) => 10,
+            HexType::Debug2d(_) => 11
+        }
+    }
+}
+
+impl From<i32> for HexType {
+    fn from(index: i32) -> HexType {
+        match index {
+            0 => HexType::Field,
+            1 => HexType::Forest,
+            2 => HexType::Desert,
+            3 => HexType::Tundra,
+            4 => HexType::Water,
+            5 => HexType::Ocean,
+            6 => HexType::Mountain,
+            7 => HexType::Impassable,
+            8 => HexType::Ice,
+            9 => HexType::Jungle,
+            10 => HexType::Debug(0.5),
+            11 => HexType::Debug2d((0.5,0.5)),
+            _ => panic!("Hextype index out of range")
+        }
+    }
+}
+
 impl HexType {
     pub fn get_string_map() -> HashMap<String, HexType> {
         let mut map: HashMap<String, HexType> = HashMap::new();
@@ -182,6 +230,10 @@ impl HexType {
         map.insert(String::from("Jungle"), HexType::Jungle);
         map
     }
+
+    pub fn get_num_variants() -> usize {
+        12
+    }
 }
 
 #[cfg(test)]
@@ -194,5 +246,18 @@ mod tests {
         assert_eq!((-1,2), Hex::unwrap_coords(-1, 2, 10));
         assert_eq!((0,1), Hex::unwrap_coords(0, 1, 10));
         assert_eq!((0,1), Hex::unwrap_coords(10, 1, 10));
+    }
+
+    #[test]
+    fn distance_hex() {
+        assert_eq!(1, Hex::from_coords(5, 4).distance_to(&Hex::from_coords(6, 4)));
+        assert_eq!(1, Hex::from_coords(5, 4).distance_to(&Hex::from_coords(4, 4)));
+        assert_eq!(1, Hex::from_coords(5, 4).distance_to(&Hex::from_coords(5, 3)));
+        assert_eq!(1, Hex::from_coords(5, 4).distance_to(&Hex::from_coords(6, 3)));
+        assert_eq!(1, Hex::from_coords(5, 4).distance_to(&Hex::from_coords(4, 5)));
+        assert_eq!(1, Hex::from_coords(5, 4).distance_to(&Hex::from_coords(5, 5)));
+
+        assert_eq!(2, Hex::from_coords(-5, 4).distance_to(&Hex::from_coords(-7, 4)));
+        assert_eq!(3, Hex::from_coords(-5, 4).distance_to(&Hex::from_coords(-5, 1)));
     }
 }

@@ -5,6 +5,7 @@ use image::{RgbImage, DynamicImage};
 use crate::hexmap::HexMap;
 use crate::hex::{Hex, HexType, RATIO};
 use crate::renderers::Renderer;
+use crate::renderers::colors::ColorMap;
 
 /// Basic hardware renderer
 /// 
@@ -14,33 +15,38 @@ pub struct OGL {
     multiplier: f32,
     /// Should the map repeat on the X axis
     wrap_map: bool,
+    /// Randomize colors slightly
+    randomize_colors: bool,
+    /// Size of tiles rendered
+    tile_size: u32
 }
 
 impl OGL {
     /// Returns `Vec` of arranged `Hex` vertices
-    fn get_hex_points(hex: &Hex) -> Vec<Vertex> {
+    fn get_hex_points(&self, hex: &Hex) -> Vec<Vertex> {
         let mut verts: Vec<Vertex> = Vec::new();
         // divide hex into 4 triangles
         let indices = [5,4,0,3,1,2];
         for &i in indices.iter() {
-            verts.push(Vertex::from_tupple(OGL::get_hex_vertex(hex, i)));
+            verts.push(Vertex::from_tupple(self.get_hex_vertex(hex, i)));
         }
         verts
     }
-    /// Should the map repeat on the X axis
-    pub fn set_wrap_map(&mut self, value: bool) {
-        self.wrap_map = value;
+
+    pub fn set_random_colors(&mut self, value: bool) {
+        self.randomize_colors = value;
     }
 }
 
 impl Renderer for OGL {
-    const TILE_SIZE: u32 = 1024;
 
     fn render(&self, map: &HexMap) -> RgbImage {
-        let w = OGL::TILE_SIZE as f64;
+        let colors = ColorMap::new();
+
+        let w = self.tile_size as f64;
         let h = w;
-        let tiles_x = ((map.absolute_size_x * self.multiplier) / OGL::TILE_SIZE as f32).ceil() as u32;
-        let tiles_y = ((map.absolute_size_y * self.multiplier) / OGL::TILE_SIZE as f32).ceil() as u32;
+        let tiles_x = ((map.absolute_size_x * self.multiplier) / self.tile_size as f32).ceil() as u32;
+        let tiles_y = ((map.absolute_size_y * self.multiplier) / self.tile_size as f32).ceil() as u32;
 
         let events_loop = glutin::EventsLoop::new();
         let size = glutin::dpi::LogicalSize::new(w, h);
@@ -52,7 +58,7 @@ impl Renderer for OGL {
 
         let mut rng = thread_rng();
 
-        let shape: Vec<Vertex> = OGL::get_hex_points(&map.field[0]);
+        let shape: Vec<Vertex> = self.get_hex_points(&map.field[0]);
         implement_vertex!(Vertex, position);
         let vertex_buffer = VertexBuffer::new(&display, &shape).unwrap();
 
@@ -72,27 +78,23 @@ impl Renderer for OGL {
             let data = map.field.iter().map(|hex| {
                 let color_diff = rng.gen_range(0.98, 1.02);
                 let mut color = match hex.terrain_type {
-                    HexType::Water => (0.29, 0.5, 0.84),
-                    HexType::Field => (0.45, 0.75, 0.33),
-                    HexType::Ice => (0.79, 0.82, 0.82),
-                    HexType::Mountain => (0.3, 0.3, 0.3),
-                    HexType::Forest => (0.38, 0.6, 0.2),
-                    HexType::Ocean => (0.23, 0.45, 0.8),
-                    HexType::Tundra => (0.3, 0.4, 0.38),
-                    HexType::Desert => (0.85, 0.83, 0.70),
-                    HexType::Jungle => (0.34, 0.65, 0.1),
-                    HexType::Impassable => (0.15, 0.15, 0.15),
                     HexType::Debug(val) => (val, val, val),
                     HexType::Debug2d((val_x , val_y)) => (val_x, val_y , 0.0),
-                };
-                match hex.terrain_type {
-                    HexType::Debug(_) | HexType::Debug2d(_) => {},
                     _ => {
-                        color.0 *= color_diff;
-                        color.1 *= color_diff;
-                        color.2 *= color_diff;
+                        let color = colors.get_color_f32(&hex.terrain_type);
+                        (color.r, color.g, color.b)
                     }
                 };
+                if self.randomize_colors {
+                    match hex.terrain_type {
+                        HexType::Debug(_) | HexType::Debug2d(_) => {},
+                        _ => {
+                            color.0 *= color_diff;
+                            color.1 *= color_diff;
+                            color.2 *= color_diff;
+                        }
+                    };
+                }
                 let mut vec: Vec<Attr> = Vec::new();
                 vec.push(Attr {
                     world_position: (hex.center_x - 0.5, hex.center_y - RATIO / 2.0),
@@ -130,7 +132,7 @@ impl Renderer for OGL {
                 let uniforms = uniform! {
                     total_x: map.absolute_size_x,
                     total_y: map.absolute_size_y,
-                    win_size: OGL::TILE_SIZE as f32,
+                    win_size: self.tile_size as f32,
                     mult: self.multiplier,
                     tile_x: x as f32,
                     tile_y: y as f32
@@ -146,7 +148,7 @@ impl Renderer for OGL {
             }
         }
         debug_println!("tiles rendered");
-        DynamicImage::ImageRgb8(self.tiles_to_image(&tiles, map, self.multiplier, true)).to_rgb()
+        DynamicImage::ImageRgb8(self.tiles_to_image(&tiles, map, self.multiplier, true, self.tile_size)).to_rgb()
     }
 
     fn set_scale(&mut self, scale: f32) {
@@ -156,11 +158,15 @@ impl Renderer for OGL {
             panic!("Invalid scale, only positive values accepted")
         }
     }
+
+    fn set_wrap_map(&mut self, value: bool) {
+        self.wrap_map = value;
+    }
 }
 
 impl Default for OGL {
     fn default() -> OGL {
-        OGL{multiplier: 50.0, wrap_map: false}
+        OGL{multiplier: 50.0, wrap_map: true, randomize_colors: true, tile_size: 1024}
     }
 }
 

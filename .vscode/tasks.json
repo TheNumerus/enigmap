@@ -8,9 +8,20 @@
             "label": "cargo build release",
             "command": "cargo",
             "args": [
-                "+nightly",
                 "build",
                 "--release"
+            ],
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "group": "build"
+        },
+        {
+            "type": "shell",
+            "label": "cargo build",
+            "command": "cargo",
+            "args": [
+                "build"
             ],
             "problemMatcher": [
                 "$rustc"
@@ -19,19 +30,6 @@
                 "kind": "build",
                 "isDefault": true
             }
-        },
-        {
-            "type": "shell",
-            "label": "cargo build",
-            "command": "cargo",
-            "args": [
-                "+nightly",
-                "build"
-            ],
-            "problemMatcher": [
-                "$rustc"
-            ],
-            "group": "build"
         }
     ]
 }
