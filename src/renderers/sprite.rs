@@ -12,7 +12,7 @@ use std::collections::HashMap;
 
 use crate::hexmap::HexMap;
 use crate::hex::{Hex, HexType, RATIO};
-use crate::renderers::{Image, Renderer};
+use crate::renderers::{Image, Renderer, ColorMode};
 
 /// Textured hardware renderer
 /// 
@@ -197,7 +197,7 @@ impl Sprite {
                 let mut buf = vec![0; info.buffer_size()];
                 // Read the next frame. Currently this function should only called once.
                 reader.next_frame(&mut buf).unwrap();
-                Image::from_buffer(info.width, info.height, buf)
+                Image::from_buffer(info.width, info.height, buf, ColorMode::Rgba)
             },
             Err(_err) => Self::generate_error_texture()
         };

@@ -65,7 +65,8 @@ impl MapGen for Circle {
             }
 
             // ice on top and bottom
-            if dst_to_edge < self.ice_falloff {
+            // make sure ice is certain to appear
+            if dst_to_edge < self.ice_falloff || (hex.y == 0 || hex.y == (hex_map.size_y as i32 - 1)) {
                 hex.terrain_type = HexType::Ice;
             }
 

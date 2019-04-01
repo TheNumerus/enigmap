@@ -1,6 +1,6 @@
 use enigmap::{
     prelude::*,
-    renderers::{Basic, OGL, Sprite, Image},
+    renderers::{Basic, OGL, Sprite, Image, ColorMode},
     generators::{Circle, Islands, Geo, Debug}
 };
 
@@ -46,19 +46,19 @@ fn main() {
         1 => Box::new(OGL::default()),
         2 | _ => Box::new(Sprite::from_folder("./textures"))
     };
-    renderer.set_scale(50.0);
+    renderer.set_scale(20.0);
 
     // generate map field
     bencher(| | {
         gen.generate(&mut hexmap);
     }, "Generation", 1);
     
-    let mut img = Image::new(1, 1);
+    let mut img = Image::new(1, 1, ColorMode::Rgb);
 
     // render image
     bencher(| | {
         img = renderer.render(&hexmap);
-    }, "Rendering", 10);
+    }, "Rendering", 1);
 
     // create folder for image if needed
     let path = "./out";

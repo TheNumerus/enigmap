@@ -86,17 +86,18 @@ pub trait Renderer {
 pub struct Image {
     width: u32,
     height: u32,
-    buffer: Vec<u8>
+    buffer: Vec<u8>,
+    color_mode: ColorMode
 }
 
 impl Image {
-    pub fn new(width: u32, height: u32) -> Image {
+    pub fn new(width: u32, height: u32, color_mode: ColorMode) -> Image {
         let buffer = vec![0;(width * height * 3) as usize];
-        Image{width, height, buffer}
+        Image{width, height, buffer, color_mode}
     }
 
-    pub fn from_buffer(width: u32, height: u32, buffer: Vec<u8>) -> Image {
-        Image{width, height, buffer}
+    pub fn from_buffer(width: u32, height: u32, buffer: Vec<u8>, color_mode: ColorMode) -> Image {
+        Image{width, height, buffer, color_mode}
     }
 
     #[inline(always)]
@@ -120,7 +121,7 @@ impl Image {
         where F: Fn(u32, u32) -> [u8;3]
     {
         let buffer = vec![0;(width * height * 3) as usize];
-        let mut img = Image{width, height, buffer};
+        let mut img = Image{width, height, buffer, color_mode: ColorMode::Rgb};
         for x in 0..width {
             for y in 0..height {
                 let color = function(x, y);
@@ -134,7 +135,7 @@ impl Image {
         where F: Fn(u32, u32) -> [u8;4]
     {
         let buffer = vec![0;(width * height * 4) as usize];
-        let mut img = Image{width, height, buffer};
+        let mut img = Image{width, height, buffer, color_mode: ColorMode::Rgba};
         for x in 0..width {
             for y in 0..height {
                 let color = function(x, y);
@@ -157,4 +158,14 @@ impl Image {
     pub fn buffer(&self) -> &[u8] {
         &self.buffer
     }
+
+    #[inline(always)]
+    pub fn color_mode(&self) -> &ColorMode {
+        &self.color_mode
+    }
+}
+
+pub enum ColorMode {
+    Rgb,
+    Rgba
 }

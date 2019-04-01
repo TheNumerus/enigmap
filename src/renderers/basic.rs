@@ -2,7 +2,7 @@ use rand::prelude::*;
 
 use crate::hexmap::HexMap;
 use crate::hex::{Hex, HexType};
-use crate::renderers::{Image, Renderer};
+use crate::renderers::{Image, Renderer, ColorMode};
 use crate::renderers::colors::ColorMap;
 
 /// Software renderer
@@ -134,7 +134,7 @@ impl Basic {
                     }
                 }
                 // if the first pixel on line is in hex, the whole line is
-                if x_index == 0 && in_hex && min_x != 0 && max_y != img.width as i32 {
+                if x_index == 0 && in_hex && (min_x != 0 || max_y != (img.width as i32 - 1)) {
                     // fill whole line
                     for x in min_x..=max_x {
                         img.put_pixel(x as u32, y as u32, color);
@@ -245,7 +245,7 @@ impl Renderer for Basic {
     fn render(&self, map: &HexMap) -> Image {
         let width = (map.absolute_size_x * self.multiplier) as u32;
         let height = (map.absolute_size_y * self.multiplier) as u32;
-        let mut image = Image::new(width, height);
+        let mut image = Image::new(width, height, ColorMode::Rgb);
 
         let colors = ColorMap::new();
         for (index, hex) in map.field.iter().enumerate() {
