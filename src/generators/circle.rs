@@ -16,6 +16,15 @@ pub struct Circle {
     using_seed: bool,
 }
 
+impl Circle {
+    pub fn new_optimized(hexmap: &HexMap) -> Circle {
+        let ring_size = hexmap.size_x.min(hexmap.size_y) as f32 * 0.25;
+        let ice_falloff = hexmap.size_y as f32 * 0.05;
+        let ocean_distance = (hexmap.size_x as f32 * 0.05).round() as u32;
+        Circle{ring_size, ice_falloff, mountain_percentage: 0.08, ocean_distance, seed: 0, using_seed: false}
+    }
+}
+
 impl Default for Circle {
     fn default() -> Circle {
         Circle{ring_size: 10.0, ice_falloff: 1.8, mountain_percentage: 0.08, ocean_distance: 3, seed: 0, using_seed: false}
@@ -37,14 +46,14 @@ impl MapGen for Circle {
 
         for hex in &mut hex_map.field {
             // hex info and values
-            let noise_val = p.get([hex.center_x as f64, hex.center_y as f64]) as f32;
+            let noise_val = p.get([hex.center_x as f64 * 0.1 + seed as f64, hex.center_y as f64 * 0.1]) as f32;
             let dst_to_center_x = (hex.center_x - hex_map.absolute_size_x / 2.0).powi(2);
             let dst_to_center_y = (hex.center_y - hex_map.absolute_size_y / 2.0).powi(2);
-            let dst_to_edge = hex_map.absolute_size_y / 2.0 - (hex.center_y - hex_map.absolute_size_y / 2.0).abs() + random::<f32>();
+            let dst_to_edge = hex_map.absolute_size_y / 2.0 - (hex.center_y - hex_map.absolute_size_y / 2.0).abs() + noise_val * 3.0;
             let rel_dst_to_edge = dst_to_edge / (hex_map.absolute_size_y / 2.0);
 
             // circular land
-            if (dst_to_center_x + dst_to_center_y).sqrt() < (self.ring_size + p.get([hex.center_x as f64 * 0.1 + seed as f64, hex.center_y as f64 * 0.1]) as f32 * 5.0) {
+            if (dst_to_center_x + dst_to_center_y).sqrt() < (self.ring_size + noise_val * 5.0) {
                 hex.terrain_type = HexType::Field;
             }
 

@@ -22,7 +22,7 @@ fn main() {
     // select generator
     let gen_choice = get_u32("generator choice (0 - circle, 1 - islands, 2 - geo, 3..inf - debug)", 0);
     let mut gen: Box<dyn MapGen> = match gen_choice {
-        0 => Box::new(Circle::default()),
+        0 => Box::new(Circle::new_optimized(&hexmap)),
         1 => Box::new(Islands::default()),
         2 => Box::new(Geo::default()),
         3 | _ => Box::new(Debug::default()),
@@ -46,19 +46,19 @@ fn main() {
         1 => Box::new(OGL::default()),
         2 | _ => Box::new(Sprite::from_folder("./textures"))
     };
-    renderer.set_scale(10.0);
+    renderer.set_scale(50.0);
 
     // generate map field
     bencher(| | {
         gen.generate(&mut hexmap);
-    }, "Generation", 10);
+    }, "Generation", 1);
     
     let mut img: RgbImage = ImageBuffer::new(1,1);
 
     // render image
     bencher(| | {
         img = renderer.render(&hexmap);
-    }, "Rendering", 1);
+    }, "Rendering", 10);
 
     // create folder for image if needed
     let path = "./out";

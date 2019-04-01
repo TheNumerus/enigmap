@@ -19,7 +19,7 @@ pub struct Basic {
 }
 
 impl Basic {
-    fn render_polygon (&self, points: &[(f32, f32)], img: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, color: Rgb<u8>) {
+    pub fn render_polygon (&self, points: &[(f32, f32)], img: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, color: Rgb<u8>) {
         if points.len() < 3 {
             return;
         }
@@ -96,6 +96,85 @@ impl Basic {
         }
     }
 
+    fn render_hex_to_image (&self, points: &[(f32, f32);6], img: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, color: Rgb<u8>) {
+        // points are in this order
+        //     0
+        //  1     5
+        //  2     4
+        //     3
+
+        // clip with image edges
+        // properly round float coordinates 
+        let min_x = points[1].0.max(0.0).min(img.width() as f32 - 1.0).round() as i32;
+        let min_y = points[0].1.max(0.0).min(img.height() as f32 - 1.0).round() as i32;
+        let max_x = points[5].0.max(0.0).min(img.width() as f32 - 1.0).round() as i32;
+        let max_y = points[3].1.max(0.0).min(img.height() as f32 - 1.0).round() as i32;
+
+        let mut deltas: [(f32, f32);4] = [(0.0, 0.0); 4];
+        let mut edges: [f32;4] = [0.0; 4];
+        let point_indices: [usize; 4] = [0,1,4,5];
+
+        for i in 0..4 {
+            deltas[i] = (points[(point_indices[i] + 1) % 6].0 - points[point_indices[i]].0, points[(point_indices[i] + 1) % 6].1 - points[point_indices[i]].1);
+            edges[i] = ((min_x as f32 + 0.5 - points[point_indices[i]].0) * deltas[i].1) - ((min_y as f32 + 0.5 - points[point_indices[i]].1) * deltas[i].0);
+        }
+
+        for y in (min_y)..=(max_y) {
+            let is_reversed = ((y - min_y) % 2) != 0;
+            let x_range: Box<dyn Iterator<Item = i32>> = if is_reversed {
+                Box::new((min_x..=max_x).rev())
+            } else {
+                Box::new(min_x..=max_x)
+            };
+
+            for (x_index, x) in x_range.enumerate() {
+                let mut in_hex = true;
+                for edge in &edges {
+                    if *edge < 0.0 {
+                        in_hex = false;
+                        break;
+                    }
+                }
+                // if the first pixel on line is in hex, the whole line is
+                if x_index == 0 && in_hex && min_x != 0 && max_y != img.width() as i32{
+                    // fill whole line
+                    for x in min_x..=max_x {
+                        img.put_pixel(x as u32, y as u32, color);
+                    }
+                    // add all deltas at once
+                    if is_reversed {
+                        for (index, edge) in edges.iter_mut().enumerate() {
+                            *edge -= (max_x - min_x) as f32 * deltas[index].1;
+                        }
+                    } else {
+                        for (index, edge) in edges.iter_mut().enumerate() {
+                            *edge += (max_x - min_x) as f32 * deltas[index].1;
+                        }
+                    }
+                    break
+                }
+                if in_hex {
+                    img.put_pixel(x as u32, y as u32, color);
+                }
+
+                // dont add offset if the tested pixel is last on line
+                if x_index as i32 != (min_x - max_x).abs() {
+                    for (index, edge) in edges.iter_mut().enumerate() {
+                        if is_reversed {
+                            *edge -= deltas[index].1;
+                        } else {
+                            *edge += deltas[index].1;
+                        }
+                    }
+                }
+            }
+
+            for (index, edge) in edges.iter_mut().enumerate() {
+                *edge -= deltas[index].0;
+            }
+        }
+    }
+
     fn render_hex(&self, img: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, hex: &Hex, width: u32, colors: &ColorMap, render_wrapped: bool) {
         let mut rng = thread_rng();
         // randomize color a little bit
@@ -137,19 +216,19 @@ impl Basic {
             }
         }
 
-        self.render_polygon(&points, img, color);
+        self.render_hex_to_image(&points, img, color);
 
         if render_wrapped {
             // subtract offset
             for index in 0..6 {
                 points[index].0 -= width as f32 * self.multiplier;
             };
-            self.render_polygon(&points, img, color);
+            self.render_hex_to_image(&points, img, color);
             // now add it back up
             for index in 0..6 {
                 points[index].0 += 2.0 * width as f32 * self.multiplier;
             };
-            self.render_polygon(&points, img, color);
+            self.render_hex_to_image(&points, img, color);
         }
     }
 
