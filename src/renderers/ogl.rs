@@ -1,10 +1,9 @@
 use glium::*;
 use rand::prelude::*;
-use image::{RgbImage, DynamicImage};
 
 use crate::hexmap::HexMap;
 use crate::hex::{Hex, HexType, RATIO};
-use crate::renderers::Renderer;
+use crate::renderers::{Image, Renderer};
 use crate::renderers::colors::ColorMap;
 
 /// Basic hardware renderer
@@ -40,7 +39,7 @@ impl OGL {
 
 impl Renderer for OGL {
 
-    fn render(&self, map: &HexMap) -> RgbImage {
+    fn render(&self, map: &HexMap) -> Image {
         let colors = ColorMap::new();
 
         let w = self.tile_size as f64;
@@ -148,7 +147,7 @@ impl Renderer for OGL {
             }
         }
         debug_println!("tiles rendered");
-        DynamicImage::ImageRgb8(self.tiles_to_image(&tiles, map, self.multiplier, true, self.tile_size)).to_rgb()
+        self.tiles_to_image(&tiles, map, self.multiplier, true, self.tile_size)
     }
 
     fn set_scale(&mut self, scale: f32) {

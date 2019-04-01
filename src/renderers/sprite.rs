@@ -1,6 +1,7 @@
 use glium::*;
 use rand::prelude::*;
-use image::{RgbImage, DynamicImage, ImageBuffer, Rgba};
+//use image::{ImageBuffer, Rgba};
+use png::Decoder;
 use toml::Value;
 
 use std::path::Path;
@@ -11,7 +12,7 @@ use std::collections::HashMap;
 
 use crate::hexmap::HexMap;
 use crate::hex::{Hex, HexType, RATIO};
-use crate::renderers::Renderer;
+use crate::renderers::{Image, Renderer};
 
 /// Textured hardware renderer
 /// 
@@ -174,26 +175,33 @@ impl Sprite {
         textures
     }
 
-    fn generate_error_texture() -> ImageBuffer<Rgba<u8>, Vec<u8>> {
-        ImageBuffer::from_fn(32, 32, |x, y| {
+    fn generate_error_texture() -> Image {
+        Image::from_fn_rgba(32, 32, |x, y| {
             // create checkerboard
             let odd_x = (x/4) % 2 == 1;
             let odd_y = (y/4) % 2 == 1;
             if (odd_x && !odd_y) || (!odd_x && odd_y) {
-                Rgba([0, 0, 0, 255])
+                [0, 0, 0, 255]
             } else {
-                Rgba([255, 0, 255, 255])
+                [255, 0, 255, 255]
             }
         })
     }
 
     fn texture_from_path(&self, display: &glium::backend::glutin::Display, path: &str) -> glium::texture::texture2d::Texture2d {
-        let image = match image::open(self.texture_folder.to_owned() + path) {
-            Ok(image) => image.to_rgba(),
+        let file = File::open(self.texture_folder.to_owned() + path);
+        let image = match file {
+            Ok(image) => {
+                let decoder = Decoder::new(image);
+                let (info, mut reader) = decoder.read_info().unwrap();
+                let mut buf = vec![0; info.buffer_size()];
+                // Read the next frame. Currently this function should only called once.
+                reader.next_frame(&mut buf).unwrap();
+                Image::from_buffer(info.width, info.height, buf)
+            },
             Err(_err) => Self::generate_error_texture()
         };
-        let image_dimensions = image.dimensions();
-        let image = glium::texture::RawImage2d::from_raw_rgba_reversed(&image.into_raw(), image_dimensions);
+        let image = glium::texture::RawImage2d::from_raw_rgba_reversed(image.buffer(), (image.width(), image.height()));
         glium::texture::Texture2d::new(display, image).unwrap()
     }
 
@@ -249,7 +257,7 @@ impl Sprite {
 }
 
 impl Renderer for Sprite {
-    fn render(&self, map: &HexMap) -> RgbImage {
+    fn render(&self, map: &HexMap) -> Image {
         let w = self.tile_size as f64;
         let h = w;
         let tiles_x = ((map.absolute_size_x * self.multiplier) / self.tile_size as f32).ceil() as u32;
@@ -443,7 +451,7 @@ impl Renderer for Sprite {
             }
         }
         debug_println!("tiles rendered");
-        DynamicImage::ImageRgb8(self.tiles_to_image(&tiles, map, self.multiplier, true, self.tile_size)).to_rgb()
+        self.tiles_to_image(&tiles, map, self.multiplier, true, self.tile_size)
     }
 
     fn set_scale(&mut self, scale: f32) {

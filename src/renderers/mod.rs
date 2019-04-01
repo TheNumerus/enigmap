@@ -1,6 +1,5 @@
 use crate::hexmap::HexMap;
 use crate::hex::{Hex, RATIO};
-use image::{RgbImage, ImageBuffer, Rgb};
 
 mod basic;
 mod ogl;
@@ -15,8 +14,8 @@ pub use self::sprite::Sprite;
 pub trait Renderer {
     /// Main function used when rendering `HexMap`
     /// 
-    /// Returns `image::RgbImage`
-    fn render(&self, map: &HexMap) -> RgbImage;
+    /// Returns `Vec<u8> with image data`
+    fn render(&self, map: &HexMap) -> Image;
 
     /// Set scale of rendered hexagons
     fn set_scale(&mut self, scale: f32);
@@ -55,11 +54,11 @@ pub trait Renderer {
     }
 
     /// Returns image generated from tiles
-    fn tiles_to_image(&self, tiles: &[Vec<u8>], map: &HexMap, multiplier: f32, fix_gamma: bool, tile_size: u32) -> ImageBuffer<Rgb<u8>, Vec<u8>> {
+    fn tiles_to_image(&self, tiles: &[Vec<u8>], map: &HexMap, multiplier: f32, fix_gamma: bool, tile_size: u32) -> Image {
         let tiles_x = ((map.absolute_size_x * multiplier) / tile_size as f32).ceil() as u32;
         let target_size_x = (map.absolute_size_x * multiplier) as u32;
         let target_size_y = (map.absolute_size_y * multiplier) as u32;
-        let imgbuf: ImageBuffer<Rgb<u8>, Vec<u8>> = ImageBuffer::from_fn(target_size_x, target_size_y, |x, y| {
+        let image = Image::from_fn(target_size_x, target_size_y, |x, y| {
             let tile_x = x / tile_size;
             let tile_y = y / tile_size;
             let tile_idx = (tile_x + tile_y * tiles_x) as usize;
@@ -71,14 +70,91 @@ pub trait Renderer {
                 let r = (tiles[tile_idx][index] as f32 / 255.0).powf(2.2) * 255.0;
                 let g = (tiles[tile_idx][index + 1] as f32 / 255.0).powf(2.2) * 255.0;
                 let b = (tiles[tile_idx][index + 2] as f32 / 255.0).powf(2.2) * 255.0;
-                Rgb([r as u8, g as u8, b as u8])
+                [r as u8, g as u8, b as u8]
             } else {
-                Rgb([tiles[tile_idx][index], tiles[tile_idx][index + 1], tiles[tile_idx][index + 2]])
+                [tiles[tile_idx][index], tiles[tile_idx][index + 1], tiles[tile_idx][index + 2]]
             }
         });
-        imgbuf
+        image
     }
 
     /// Should the map repeat on the X axis
     fn set_wrap_map(&mut self, value: bool);
+}
+
+/// Helper struct for RGB images
+pub struct Image {
+    width: u32,
+    height: u32,
+    buffer: Vec<u8>
+}
+
+impl Image {
+    pub fn new(width: u32, height: u32) -> Image {
+        let buffer = vec![0;(width * height * 3) as usize];
+        Image{width, height, buffer}
+    }
+
+    pub fn from_buffer(width: u32, height: u32, buffer: Vec<u8>) -> Image {
+        Image{width, height, buffer}
+    }
+
+    #[inline(always)]
+    pub fn put_pixel(&mut self, x: u32, y: u32, color: [u8;3]) {
+        let index = ((x + y * self.width) * 3) as usize;
+        self.buffer[index] = color[0];
+        self.buffer[index + 1] = color[1];
+        self.buffer[index + 2] = color[2];
+    }
+
+    #[inline(always)]
+    pub fn put_pixel_rgba(&mut self, x: u32, y: u32, color: [u8;4]) {
+        let index = ((x + y * self.width) * 4) as usize;
+        self.buffer[index] = color[0];
+        self.buffer[index + 1] = color[1];
+        self.buffer[index + 2] = color[2];
+        self.buffer[index + 3] = color[3];
+    }
+
+    pub fn from_fn<F>(width: u32, height: u32, function: F) -> Image 
+        where F: Fn(u32, u32) -> [u8;3]
+    {
+        let buffer = vec![0;(width * height * 3) as usize];
+        let mut img = Image{width, height, buffer};
+        for x in 0..width {
+            for y in 0..height {
+                let color = function(x, y);
+                img.put_pixel(x,y,color);
+            }
+        }
+        img
+    }
+
+    pub fn from_fn_rgba<F>(width: u32, height: u32, function: F) -> Image 
+        where F: Fn(u32, u32) -> [u8;4]
+    {
+        let buffer = vec![0;(width * height * 4) as usize];
+        let mut img = Image{width, height, buffer};
+        for x in 0..width {
+            for y in 0..height {
+                let color = function(x, y);
+                img.put_pixel_rgba(x,y,color);
+            }
+        }
+        img
+    }
+
+    #[inline(always)]
+    pub fn height(&self) -> u32 {
+        self.height
+    }
+
+    #[inline(always)]
+    pub fn width(&self) -> u32 {
+        self.width
+    }
+
+    pub fn buffer(&self) -> &[u8] {
+        &self.buffer
+    }
 }

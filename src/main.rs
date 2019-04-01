@@ -1,10 +1,8 @@
 use enigmap::{
     prelude::*,
-    renderers::{Basic, OGL, Sprite},
+    renderers::{Basic, OGL, Sprite, Image},
     generators::{Circle, Islands, Geo, Debug}
 };
-
-use image::{RgbImage, ImageBuffer};
 
 use std::{
     fs,
@@ -12,6 +10,8 @@ use std::{
     path::Path,
     time::Instant
 };
+
+use png::HasParameters;
 
 fn main() {
     let sizes = get_size();
@@ -53,7 +53,7 @@ fn main() {
         gen.generate(&mut hexmap);
     }, "Generation", 1);
     
-    let mut img: RgbImage = ImageBuffer::new(1,1);
+    let mut img = Image::new(1, 1);
 
     // render image
     bencher(| | {
@@ -68,7 +68,17 @@ fn main() {
 
     // save image
     bencher(| | {
-        img.save("./out/image.png").unwrap();
+        let path = Path::new("./out/image.png");
+        let file = fs::File::create(path).unwrap();
+        let ref mut w = io::BufWriter::new(file);
+
+        let mut encoder = png::Encoder::new(w, img.width(), img.height());
+        encoder.set(png::ColorType::RGB).set(png::BitDepth::Eight);
+
+        let mut writer = encoder.write_header().unwrap();
+        writer.write_image_data(img.buffer()).unwrap();
+        //let img: ImageBuffer<Rgb<u8>, Vec<u8>> = ImageBuffer::from_raw(img.width(), img.height(), img.buffer().to_vec()).unwrap();
+        //img.save("./out/image.png").unwrap();
     }, "Saving", 1);
 }
 

@@ -1,11 +1,9 @@
-use image::{RgbImage, ImageBuffer, Rgb};
 use rand::prelude::*;
 
 use crate::hexmap::HexMap;
 use crate::hex::{Hex, HexType};
-use crate::renderers::Renderer;
+use crate::renderers::{Image, Renderer};
 use crate::renderers::colors::ColorMap;
-
 
 /// Software renderer
 /// 
@@ -19,7 +17,7 @@ pub struct Basic {
 }
 
 impl Basic {
-    pub fn render_polygon (&self, points: &[(f32, f32)], img: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, color: Rgb<u8>) {
+    pub fn render_polygon (&self, points: &[(f32, f32)], img: &mut Image, color: [u8;3]) {
         if points.len() < 3 {
             return;
         }
@@ -37,18 +35,18 @@ impl Basic {
             max_y = max_y.max(point.1);
         };
 
-        max_x = max_x.min(img.width() as f32);
-        max_y = max_y.min(img.height() as f32);
+        max_x = max_x.min(img.width as f32);
+        max_y = max_y.min(img.height as f32);
 
         min_x = min_x.max(0.0);
         min_y = min_y.max(0.0);
 
 
         // properly round float coordinates 
-        let min_x = min_x.max(0.0).min(img.width() as f32 - 1.0).round() as i32;
-        let min_y = min_y.max(0.0).min(img.height() as f32 - 1.0).round() as i32;
-        let max_x = max_x.max(0.0).min(img.width() as f32 - 1.0).round() as i32;
-        let max_y = max_y.max(0.0).min(img.height() as f32 - 1.0).round() as i32;
+        let min_x = min_x.max(0.0).min(img.width as f32 - 1.0).round() as i32;
+        let min_y = min_y.max(0.0).min(img.height as f32 - 1.0).round() as i32;
+        let max_x = max_x.max(0.0).min(img.width as f32 - 1.0).round() as i32;
+        let max_y = max_y.max(0.0).min(img.height as f32 - 1.0).round() as i32;
 
         let mut deltas: Vec<(f32, f32)> = Vec::with_capacity(points.len());
         let mut edges: Vec<f32> = Vec::with_capacity(points.len());
@@ -96,7 +94,7 @@ impl Basic {
         }
     }
 
-    fn render_hex_to_image (&self, points: &[(f32, f32);6], img: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, color: Rgb<u8>) {
+    fn render_hex_to_image (&self, points: &[(f32, f32);6], img: &mut Image, color: [u8;3]) {
         // points are in this order
         //     0
         //  1     5
@@ -105,10 +103,10 @@ impl Basic {
 
         // clip with image edges
         // properly round float coordinates 
-        let min_x = points[1].0.max(0.0).min(img.width() as f32 - 1.0).round() as i32;
-        let min_y = points[0].1.max(0.0).min(img.height() as f32 - 1.0).round() as i32;
-        let max_x = points[5].0.max(0.0).min(img.width() as f32 - 1.0).round() as i32;
-        let max_y = points[3].1.max(0.0).min(img.height() as f32 - 1.0).round() as i32;
+        let min_x = points[1].0.max(0.0).min(img.width as f32 - 1.0).round() as i32;
+        let min_y = points[0].1.max(0.0).min(img.height as f32 - 1.0).round() as i32;
+        let max_x = points[5].0.max(0.0).min(img.width as f32 - 1.0).round() as i32;
+        let max_y = points[3].1.max(0.0).min(img.height as f32 - 1.0).round() as i32;
 
         let mut deltas: [(f32, f32);4] = [(0.0, 0.0); 4];
         let mut edges: [f32;4] = [0.0; 4];
@@ -136,7 +134,7 @@ impl Basic {
                     }
                 }
                 // if the first pixel on line is in hex, the whole line is
-                if x_index == 0 && in_hex && min_x != 0 && max_y != img.width() as i32{
+                if x_index == 0 && in_hex && min_x != 0 && max_y != img.width as i32 {
                     // fill whole line
                     for x in min_x..=max_x {
                         img.put_pixel(x as u32, y as u32, color);
@@ -175,7 +173,7 @@ impl Basic {
         }
     }
 
-    fn render_hex(&self, img: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, hex: &Hex, width: u32, colors: &ColorMap, render_wrapped: bool) {
+    fn render_hex(&self, image: &mut Image, hex: &Hex, width: u32, colors: &ColorMap, render_wrapped: bool) {
         let mut rng = thread_rng();
         // randomize color a little bit
         let color_diff = rng.gen_range(0.98, 1.02);
@@ -191,16 +189,16 @@ impl Basic {
         let mut color = match hex.terrain_type {
             HexType::Debug(val) => {
                 let value = (val * 255.0).max(0.0).min(255.0) as u8;
-                Rgb([value, value, value])
+                [value, value, value]
             },
             HexType::Debug2d((r,g)) => {
                 let red = (r * 255.0).max(0.0).min(255.0) as u8;
                 let green = (g * 255.0).max(0.0).min(255.0) as u8;
-                Rgb([red, green, 0])
+                [red, green, 0]
             },
             _ => {
                 let color = colors.get_color_u8(&hex.terrain_type);
-                Rgb([color.0, color.1, color.2])
+                [color.0, color.1, color.2]
             }
         };
 
@@ -210,25 +208,25 @@ impl Basic {
                 HexType::Debug(_) | HexType::Debug2d(_) => {},
                 _ => {
                     for i in 0..3 {
-                        color.data[i] = (f32::from(color.data[i]) * color_diff) as u8;
+                        color[i] = (f32::from(color[i]) * color_diff).max(0.0).min(255.0) as u8;
                     }
                 }
             }
         }
 
-        self.render_hex_to_image(&points, img, color);
+        self.render_hex_to_image(&points, image, color);
 
         if render_wrapped {
             // subtract offset
             for index in 0..6 {
                 points[index].0 -= width as f32 * self.multiplier;
             };
-            self.render_hex_to_image(&points, img, color);
+            self.render_hex_to_image(&points, image, color);
             // now add it back up
             for index in 0..6 {
                 points[index].0 += 2.0 * width as f32 * self.multiplier;
             };
-            self.render_hex_to_image(&points, img, color);
+            self.render_hex_to_image(&points, image, color);
         }
     }
 
@@ -244,21 +242,23 @@ impl Default for Basic {
 }
 
 impl Renderer for Basic {
-    fn render(&self, map: &HexMap) -> RgbImage {
-        let w = (map.absolute_size_x * self.multiplier) as u32;
-        let h = (map.absolute_size_y * self.multiplier) as u32;
-        let mut imgbuf = RgbImage::new(w,h);
+    fn render(&self, map: &HexMap) -> Image {
+        let width = (map.absolute_size_x * self.multiplier) as u32;
+        let height = (map.absolute_size_y * self.multiplier) as u32;
+        let mut image = Image::new(width, height);
+
         let colors = ColorMap::new();
         for (index, hex) in map.field.iter().enumerate() {
-            self.render_hex(&mut imgbuf, hex, map.size_x, &colors, false);
             // render only hexes on the sides, not the whole field
             if self.wrap_map && (index as u32 % map.size_x == 0 || index as u32 % map.size_x == (map.size_x - 1)) {
-                self.render_hex(&mut imgbuf, hex, map.size_x, &colors, true);   
+                self.render_hex(&mut image, hex, map.size_x, &colors, true);   
+            } else {
+                self.render_hex(&mut image, hex, map.size_x, &colors, false);
             }
         }
         // Test polygon
         //self.render_polygon(&[(10.0, 10.0),(20.0, 400.0),(400.0, 10.0)], &mut imgbuf, Rgb([128,128,128]));
-        imgbuf
+        image
     }
 
     fn set_scale(&mut self, scale: f32) {
