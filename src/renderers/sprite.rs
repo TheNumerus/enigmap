@@ -303,7 +303,7 @@ impl Renderer for Sprite {
                 if hex.terrain_type != hex_type_map[key] {
                     return None
                 }
-                Some(rng.gen_range::<u32>(1, self.variations[key] + 1))
+                Some(rng.gen_range::<u32, u32, u32>(1, self.variations[key] + 1))
             }).collect::<Vec<u32>>();
             for i in 1..=self.variations[key] {
                 let mut colors_iter = colors.iter();
@@ -324,7 +324,7 @@ impl Renderer for Sprite {
                     };
                     // random rotation
                     let rotation = if self.random_rotation.is_hextype_included(&hex_type) {
-                        Sprite::get_rotation(rng.gen_range::<u32>(0,5))
+                        Sprite::get_rotation(rng.gen_range::<u32, u32, u32>(0,5))
                     } else {
                         Sprite::get_rotation(0)
                     };
@@ -458,7 +458,8 @@ impl Renderer for Sprite {
         if scale > 0.0 {
             self.multiplier = scale;
         } else {
-            panic!("Invalid scale, only positive values accepted")
+            self.multiplier = 50.0;
+            eprintln!("Tried to set negative scale, setting default scale instead.");
         }
     }
 

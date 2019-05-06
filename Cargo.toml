@@ -12,11 +12,11 @@ exclude = [
 ]
 
 [dependencies]
-rand = "0.5.5"
+rand = "0.6.5"
 noise = "0.5.1"
-glium = "0.22.0"
+glium = "0.24.0"
 toml = "0.4.10"
-png = "0.14.0"
+png = "0.14.1"
 
 [dev-dependencies]
 criterion = "0.2"

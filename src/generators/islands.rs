@@ -148,7 +148,7 @@ impl Islands {
             wind_field.push((noise_val_x / len, noise_val_y / len));
         }
 
-        let old_field = hex_map.field.clone();
+        let old_map = hex_map.clone();
         for (index, hex) in hex_map.field.iter_mut().enumerate() {
             // skip not deserts
             match hex.terrain_type {
@@ -157,21 +157,12 @@ impl Islands {
             }
             let (x_wind, y_wind) = wind_field[index];
 
-            // get closest hex to target
-            let target_x = hex.center_x + x_wind * 5.0;
-            let target_y = hex.center_y + y_wind * 5.0;
-            let mut dst = f32::MAX;
-            let mut target_hex_index = 0;
-            for (old_index, old_hex) in old_field.iter().enumerate() {
-                let dst_x = target_x - old_hex.center_x;
-                let dst_y = target_y - old_hex.center_y;
-                let dst_to_target = (dst_x.powi(2) + dst_y.powi(2)).sqrt();
-                if dst_to_target < dst {
-                    dst = dst_to_target;
-                    target_hex_index = old_index;
-                }
-            }
-            match old_field[target_hex_index].terrain_type {
+            let target_x = hex.center_x + x_wind * old_map.get_avg_size() as f32 * 0.2;
+            let target_y = hex.center_y + y_wind * old_map.get_avg_size() as f32 * 0.2;
+
+            let target_hex_index = old_map.get_closest_hex_index(target_x, target_y);
+
+            match old_map.field[target_hex_index].terrain_type {
                 HexType::Water | HexType::Ocean => {
                     hex.terrain_type = HexType::Jungle;
                 },

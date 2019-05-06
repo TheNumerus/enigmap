@@ -18,7 +18,7 @@ pub struct Hex {
 }
 
 /// This is roughly ratio of hexagon height to width
-pub const RATIO: f32 = 1.1547;
+pub const RATIO: f32 = 1.15470053838;
 
 impl Hex {
     /// Creates new empty 'Hex' with default values
@@ -67,20 +67,20 @@ impl Hex {
     }
 
         /// Returns vector of `Hex` tiles next to specified `Hex` without checking if contained in hexmap
-    pub fn get_neighbours_unchecked(&self, hexmap: &HexMap) -> Vec<(i32, i32)> {
-        let mut neighbours: Vec<(i32, i32)> = Vec::with_capacity(6);
+    pub fn get_neighbours_unchecked(&self, hexmap: &HexMap) -> [(i32, i32); 6] {
+        let mut neighbours = [(0, 0); 6];
         // bottom right
-        neighbours.push(Hex::unwrap_coords(self.x, self.y + 1, hexmap.size_x));
+        neighbours[0] = Hex::unwrap_coords(self.x, self.y + 1, hexmap.size_x);
         // bottom left
-        neighbours.push(Hex::unwrap_coords(self.x - 1, self.y + 1, hexmap.size_x));
+        neighbours[1] = Hex::unwrap_coords(self.x - 1, self.y + 1, hexmap.size_x);
         // left
-        neighbours.push(Hex::unwrap_coords(self.x - 1, self.y, hexmap.size_x));
+        neighbours[2] = Hex::unwrap_coords(self.x - 1, self.y, hexmap.size_x);
         // top left
-        neighbours.push(Hex::unwrap_coords(self.x, self.y - 1, hexmap.size_x));
+        neighbours[3] = Hex::unwrap_coords(self.x, self.y - 1, hexmap.size_x);
         // top right
-        neighbours.push(Hex::unwrap_coords(self.x + 1, self.y - 1, hexmap.size_x));
+        neighbours[4] = Hex::unwrap_coords(self.x + 1, self.y - 1, hexmap.size_x);
         // right
-        neighbours.push(Hex::unwrap_coords(self.x + 1, self.y, hexmap.size_x));
+        neighbours[5] = Hex::unwrap_coords(self.x + 1, self.y, hexmap.size_x);
 
         neighbours
     }

@@ -163,6 +163,12 @@ impl Image {
     pub fn color_mode(&self) -> &ColorMode {
         &self.color_mode
     }
+
+    #[inline(always)]
+    pub fn get_pixel(&self, x: u32, y: u32) -> &[u8] {
+        let index = ((x + y * self.width) * 3) as usize;
+        &self.buffer[index..index + 3]
+    }
 }
 
 pub enum ColorMode {

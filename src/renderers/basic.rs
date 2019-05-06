@@ -5,6 +5,8 @@ use crate::hex::{Hex, HexType};
 use crate::renderers::{Image, Renderer, ColorMode};
 use crate::renderers::colors::ColorMap;
 
+const SUPERSAMPLE_FACTOR: u32 = 4;
+
 /// Software renderer
 /// 
 pub struct Basic {
@@ -13,7 +15,9 @@ pub struct Basic {
     /// Should the map repeat on the X axis
     wrap_map: bool,
     /// Randomize colors slightly
-    randomize_colors: bool
+    randomize_colors: bool,
+    /// Use anti-aliasing when rendering
+    antialiasing: bool
 }
 
 impl Basic {
@@ -134,7 +138,8 @@ impl Basic {
                     }
                 }
                 // if the first pixel on line is in hex, the whole line is
-                if x_index == 0 && in_hex && (min_x != 0 || max_y != (img.width as i32 - 1)) {
+                // don't use this rule on edges
+                if x_index == 0 && in_hex && !(min_x == 0 || max_x == (img.width as i32 - 1)) {
                     // fill whole line
                     for x in min_x..=max_x {
                         img.put_pixel(x as u32, y as u32, color);
@@ -183,18 +188,24 @@ impl Basic {
         let mut points = [(0.0, 0.0);6];
         for index in 0..6 {
             let coords = self.get_hex_vertex(hex, index);
-            points[5 - index] = (coords.0 * self.multiplier, coords.1 * self.multiplier);
+            if self.antialiasing {
+                points[5 - index] = (coords.0 * self.multiplier * SUPERSAMPLE_FACTOR as f32, coords.1 * self.multiplier * SUPERSAMPLE_FACTOR as f32);
+            } else {
+                points[5 - index] = (coords.0 * self.multiplier, coords.1 * self.multiplier);
+            }
+        };
+
+        let clamp_color = |value: f32| {
+            (value).max(0.0).min(255.0) as u8
         };
 
         let mut color = match hex.terrain_type {
             HexType::Debug(val) => {
-                let value = (val * 255.0).max(0.0).min(255.0) as u8;
+                let value = clamp_color(val * 255.0);
                 [value, value, value]
             },
             HexType::Debug2d((r,g)) => {
-                let red = (r * 255.0).max(0.0).min(255.0) as u8;
-                let green = (g * 255.0).max(0.0).min(255.0) as u8;
-                [red, green, 0]
+                [clamp_color(r * 255.0), clamp_color(g * 255.0), 0]
             },
             _ => {
                 let color = colors.get_color_u8(&hex.terrain_type);
@@ -208,7 +219,7 @@ impl Basic {
                 HexType::Debug(_) | HexType::Debug2d(_) => {},
                 _ => {
                     for i in 0..3 {
-                        color[i] = (f32::from(color[i]) * color_diff).max(0.0).min(255.0) as u8;
+                        color[i] = clamp_color(f32::from(color[i]) * color_diff);
                     }
                 }
             }
@@ -216,33 +227,84 @@ impl Basic {
 
         self.render_hex_to_image(&points, image, color);
 
+        let scale = if self.antialiasing {
+            SUPERSAMPLE_FACTOR as f32
+        } else {
+            1.0
+        };
+
         if render_wrapped {
             // subtract offset
             for index in 0..6 {
-                points[index].0 -= width as f32 * self.multiplier;
+                points[index].0 -= scale * width as f32 * self.multiplier;
             };
             self.render_hex_to_image(&points, image, color);
             // now add it back up
             for index in 0..6 {
-                points[index].0 += 2.0 * width as f32 * self.multiplier;
+                points[index].0 += scale * 2.0 * width as f32 * self.multiplier;
             };
             self.render_hex_to_image(&points, image, color);
         }
     }
 
+    fn render_aa_image(&self, map: &HexMap) -> Image {
+        let width = (map.absolute_size_x * self.multiplier) as u32;
+        let height = (map.absolute_size_y * self.multiplier) as u32;
+        let mut image_final = Image::new(width, height, ColorMode::Rgb);
+
+        let mut image_supersampled = Image::new(width * SUPERSAMPLE_FACTOR, height * SUPERSAMPLE_FACTOR, ColorMode::Rgb);
+
+        let colors = ColorMap::new();
+        for (index, hex) in map.field.iter().enumerate() {
+            // render only hexes on the sides, not the whole field
+            if self.wrap_map && (index as u32 % map.size_x == 0 || index as u32 % map.size_x == (map.size_x - 1)) {
+                self.render_hex(&mut image_supersampled, hex, map.size_x, &colors, true);   
+            } else {
+                self.render_hex(&mut image_supersampled, hex, map.size_x, &colors, false);
+            }
+        }
+
+
+        // downsample
+        for x in 0..width {
+            for y in 0..height {
+                let mut samples = Vec::with_capacity(16);
+                for i in 0..SUPERSAMPLE_FACTOR {
+                    for j in 0..SUPERSAMPLE_FACTOR {
+                        samples.push(image_supersampled.get_pixel((SUPERSAMPLE_FACTOR * x) + i, (SUPERSAMPLE_FACTOR * y) + j));
+                    }
+                }
+                let avg_red: u32 = samples.iter().map(|pixel|  pixel[0] as u32).sum::<u32>() / (SUPERSAMPLE_FACTOR * SUPERSAMPLE_FACTOR);
+                let avg_green: u32 = samples.iter().map(|pixel|  pixel[1] as u32).sum::<u32>() / (SUPERSAMPLE_FACTOR * SUPERSAMPLE_FACTOR);
+                let avg_blue: u32 = samples.iter().map(|pixel|  pixel[2] as u32).sum::<u32>() / (SUPERSAMPLE_FACTOR * SUPERSAMPLE_FACTOR);
+                image_final.put_pixel(x as u32, y as u32, [avg_red as u8, avg_green as u8, avg_blue as u8]);
+            }
+        }
+
+        image_final
+    }
+
     pub fn set_random_colors(&mut self, value: bool) {
         self.randomize_colors = value;
+    }
+
+    pub fn use_antialiasing(&mut self, value: bool) {
+        self.antialiasing = value;
     }
 }
 
 impl Default for Basic {
     fn default() -> Basic {
-        Basic{multiplier: 50.0, wrap_map: true, randomize_colors: true}
+        Basic{multiplier: 50.0, wrap_map: true, randomize_colors: true, antialiasing: true}
     }
 }
 
 impl Renderer for Basic {
     fn render(&self, map: &HexMap) -> Image {
+        if self.antialiasing {
+            return self.render_aa_image(map);
+        }
+
         let width = (map.absolute_size_x * self.multiplier) as u32;
         let height = (map.absolute_size_y * self.multiplier) as u32;
         let mut image = Image::new(width, height, ColorMode::Rgb);
@@ -265,7 +327,8 @@ impl Renderer for Basic {
         if scale > 0.0 {
             self.multiplier = scale;
         } else {
-            panic!("Invalid scale, only positive values accepted")
+            self.multiplier = 50.0;
+            eprintln!("Tried to set negative scale, setting default scale instead.");
         }
     }
 

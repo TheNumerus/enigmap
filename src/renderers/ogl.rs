@@ -154,7 +154,8 @@ impl Renderer for OGL {
         if scale > 0.0 {
             self.multiplier = scale;
         } else {
-            panic!("Invalid scale, only positive values accepted")
+            self.multiplier = 50.0;
+            eprintln!("Tried to set negative scale, setting default scale instead.");
         }
     }
 
