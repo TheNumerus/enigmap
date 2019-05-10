@@ -178,7 +178,7 @@ impl Basic {
         }
     }
 
-    fn render_hex(&self, image: &mut Image, hex: &Hex, width: u32, colors: &ColorMap, render_wrapped: bool) {
+    fn render_hex(&self, image: &mut Image, hex: &Hex, width: u32, colors: &ColorMap, render_wrapped: RenderWrapped) {
         let mut rng = thread_rng();
         // randomize color a little bit
         let color_diff = rng.gen_range(0.98, 1.02);
@@ -233,18 +233,23 @@ impl Basic {
             1.0
         };
 
-        if render_wrapped {
-            // subtract offset
-            for index in 0..6 {
-                points[index].0 -= scale * width as f32 * self.multiplier;
-            };
-            self.render_hex_to_image(&points, image, color);
-            // now add it back up
-            for index in 0..6 {
-                points[index].0 += scale * 2.0 * width as f32 * self.multiplier;
-            };
-            self.render_hex_to_image(&points, image, color);
-        }
+        match render_wrapped {
+            RenderWrapped::None => {},
+            RenderWrapped::Left => {
+                // subtract offset
+                for index in 0..6 {
+                    points[index].0 -= scale * width as f32 * self.multiplier;
+                };
+                self.render_hex_to_image(&points, image, color);
+            },
+            RenderWrapped::Right => {
+                // add offset
+                for index in 0..6 {
+                    points[index].0 += scale * width as f32 * self.multiplier;
+                };
+                self.render_hex_to_image(&points, image, color);
+            }
+        };
     }
 
     fn render_aa_image(&self, map: &HexMap) -> Image {
@@ -256,27 +261,34 @@ impl Basic {
 
         let colors = ColorMap::new();
         for (index, hex) in map.field.iter().enumerate() {
-            // render only hexes on the sides, not the whole field
-            if self.wrap_map && (index as u32 % map.size_x == 0 || index as u32 % map.size_x == (map.size_x - 1)) {
-                self.render_hex(&mut image_supersampled, hex, map.size_x, &colors, true);   
+            let wrapping = if self.wrap_map && index as u32 % map.size_x == 0 {
+                RenderWrapped::Right
+            } else if self.wrap_map && index as u32 % map.size_x == (map.size_x - 1) {
+                RenderWrapped::Left
             } else {
-                self.render_hex(&mut image_supersampled, hex, map.size_x, &colors, false);
-            }
+                RenderWrapped::None
+            };
+            self.render_hex(&mut image_supersampled, hex, map.size_x, &colors, wrapping);
         }
 
 
         // downsample
         for x in 0..width {
             for y in 0..height {
-                let mut samples = Vec::with_capacity(16);
+                let mut total_red = 0;
+                let mut total_green = 0;
+                let mut total_blue = 0;
                 for i in 0..SUPERSAMPLE_FACTOR {
                     for j in 0..SUPERSAMPLE_FACTOR {
-                        samples.push(image_supersampled.get_pixel((SUPERSAMPLE_FACTOR * x) + i, (SUPERSAMPLE_FACTOR * y) + j));
+                        let pixel = image_supersampled.get_pixel((SUPERSAMPLE_FACTOR * x) + i, (SUPERSAMPLE_FACTOR * y) + j);
+                        total_red+=pixel[0] as u32;
+                        total_green+=pixel[1] as u32;
+                        total_blue+=pixel[2] as u32;
                     }
                 }
-                let avg_red: u32 = samples.iter().map(|pixel|  pixel[0] as u32).sum::<u32>() / (SUPERSAMPLE_FACTOR * SUPERSAMPLE_FACTOR);
-                let avg_green: u32 = samples.iter().map(|pixel|  pixel[1] as u32).sum::<u32>() / (SUPERSAMPLE_FACTOR * SUPERSAMPLE_FACTOR);
-                let avg_blue: u32 = samples.iter().map(|pixel|  pixel[2] as u32).sum::<u32>() / (SUPERSAMPLE_FACTOR * SUPERSAMPLE_FACTOR);
+                let avg_red: u32 = total_red / (SUPERSAMPLE_FACTOR * SUPERSAMPLE_FACTOR);
+                let avg_green: u32 = total_green / (SUPERSAMPLE_FACTOR * SUPERSAMPLE_FACTOR);
+                let avg_blue: u32 = total_blue / (SUPERSAMPLE_FACTOR * SUPERSAMPLE_FACTOR);
                 image_final.put_pixel(x as u32, y as u32, [avg_red as u8, avg_green as u8, avg_blue as u8]);
             }
         }
@@ -310,16 +322,17 @@ impl Renderer for Basic {
         let mut image = Image::new(width, height, ColorMode::Rgb);
 
         let colors = ColorMap::new();
+
         for (index, hex) in map.field.iter().enumerate() {
-            // render only hexes on the sides, not the whole field
-            if self.wrap_map && (index as u32 % map.size_x == 0 || index as u32 % map.size_x == (map.size_x - 1)) {
-                self.render_hex(&mut image, hex, map.size_x, &colors, true);   
+            let wrapping = if self.wrap_map && index as u32 % map.size_x == 0 {
+                RenderWrapped::Right
+            } else if self.wrap_map && index as u32 % map.size_x == (map.size_x - 1) {
+                RenderWrapped::Left
             } else {
-                self.render_hex(&mut image, hex, map.size_x, &colors, false);
-            }
+                RenderWrapped::None
+            };
+            self.render_hex(&mut image, hex, map.size_x, &colors, wrapping);
         }
-        // Test polygon
-        //self.render_polygon(&[(10.0, 10.0),(20.0, 400.0),(400.0, 10.0)], &mut imgbuf, Rgb([128,128,128]));
         image
     }
 
@@ -335,4 +348,10 @@ impl Renderer for Basic {
     fn set_wrap_map(&mut self, value: bool) {
         self.wrap_map = value;
     }
+}
+
+enum RenderWrapped {
+    Left,
+    Right,
+    None
 }

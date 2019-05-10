@@ -110,7 +110,7 @@ impl Hex {
                 hex = Hex::from_coords(neighbour.0, neighbour.1);
             }
         }
-        results.iter().filter(|&s| {s.1 >= 0 && s.1 < hexmap.size_y as i32}).map(|&s| (s.0, s.1)).collect()
+        results.iter().map(|&s| Hex::unwrap_coords(s.0, s.1, hexmap.size_x)).collect()
     }
 
     /// Returns spiral of given radius around specified hex

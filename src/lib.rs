@@ -17,10 +17,6 @@
 //!let img = renderer.render(&hexmap); // renders to image
 //!```
 
-#[cfg(feature = "serde")]
-#[macro_use]
-extern crate serde;
-
 mod hexmap;
 mod hex;
 
