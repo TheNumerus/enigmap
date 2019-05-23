@@ -230,7 +230,7 @@ impl Islands {
             let mut diff_neighbours = 0;
             // check for neighbours
             for (neighbour_x, neighbour_y) in hex.get_neighbours(&old_map) {
-                let index = old_map.coords_to_index(neighbour_x, neighbour_y);
+                let index = old_map.coords_to_index(neighbour_x, neighbour_y).unwrap();
                 if hex.terrain_type != old_map.field[index].terrain_type {
                     diff_neighbours += 1;
                 }

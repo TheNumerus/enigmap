@@ -40,16 +40,14 @@ impl HexMap {
     }
 
     /// Converts `x, y` coordinates into index which can be used to access specific `Hex`
-    /// # Panics
-    /// when specified `x, y` coordinates are out of bounds
-    pub fn coords_to_index(&self, x: i32, y: i32) -> usize {
+    pub fn coords_to_index(&self, x: i32, y: i32) -> Option<usize> {
         let base = y * self.size_x as i32;
         let offset = y / 2;
         let index = (base + x + offset) as usize;
-        if index > (self.size_x * self.size_y) as usize {
-            panic!{"index {} out of range", index};
+        if index >= (self.size_x * self.size_y) as usize {
+            return None
         }
-        index
+        Some(index)
     }
 
     /// Converts index into `(x, y)` coordinates of specific `Hex`
@@ -101,22 +99,33 @@ impl HexMap {
         self.get_closest_hex_index(x,y)
     }
 
-    /// Returns refrence to hex, does not check out of range hexes
-    pub fn get_hex(&self, x: i32, y: i32) -> &Hex {
+    /// Returns refrence to hex if given hex exists
+    pub fn get_hex(&self, x: i32, y: i32) -> Option<&Hex> {
         let index = self.coords_to_index(x, y);
-        &self.field[index]
+        match index {
+            Some(idx) => Some(&self.field[idx]),
+            None => None
+        }
+        //&self.field[index]
     }
 
-    /// Returns mutable refrence to hex, does not check out of range hexes
-    pub fn get_hex_mut(&mut self, x: i32, y: i32) -> &mut Hex {
+    /// Returns mutable refrence to hex if giver hex exists
+    pub fn get_hex_mut(&mut self, x: i32, y: i32) -> Option<&mut Hex> {
         let index = self.coords_to_index(x, y);
-        &mut self.field[index]
+        match index {
+            Some(idx) => Some(&mut self.field[idx]),
+            None => None
+        }
+        //&mut self.field[index]
     }
 
     /// Sets hex value
     pub fn set_hex(&mut self, x: i32, y: i32, hex: Hex) {
         let index = self.coords_to_index(x, y);
-        self.field[index] = hex
+        match index {
+            Some(idx) => self.field[idx] = hex,
+            _ => {}
+        }
     }
 
     pub fn clean_up(&mut self) {

@@ -115,7 +115,7 @@ impl Geo {
             let search_area = hex.get_spiral(hexmap, radius);
             let mut pressure = (0.0, 0.0);
             for (hex_x, hex_y) in &search_area {
-                let index = hexmap.coords_to_index(*hex_x, *hex_y);
+                let index = hexmap.coords_to_index(*hex_x, *hex_y).unwrap();
                 let dir = plates.directions[plates.indices[index].1];
                 pressure.0 += dir.0;
                 pressure.1 += dir.1;
@@ -169,7 +169,7 @@ impl Geo {
             let coords = hexmap.index_to_coords(index as u32);
             let search_area = Hex::from_coords(coords.0, coords.1).get_spiral(hexmap, 1);
             for (hex_x, hex_y) in &search_area {
-                let index = hexmap.coords_to_index(*hex_x, *hex_y);
+                let index = hexmap.coords_to_index(*hex_x, *hex_y).unwrap();
                 let count = counts[index];
                 c += count as f32;
             }
@@ -197,7 +197,7 @@ impl Geo {
             let search_area = Hex::from_coords(coords.0, coords.1).get_spiral(hexmap, radius);
             let mut height_avg = 0.0;
             for (hex_x, hex_y) in &search_area {
-                let index = hexmap.coords_to_index(*hex_x, *hex_y);
+                let index = hexmap.coords_to_index(*hex_x, *hex_y).unwrap();
                 height_avg += heights_copy[index];
             }
             height_avg /= search_area.len() as f32;
@@ -342,7 +342,7 @@ impl Geo {
             costs[*plate_index][plate_num] = Some(0.0);
             while let Some(current) = frontier.pop_front() {
                 for (hex_x, hex_y) in hexmap.field[current].get_neighbours(&hexmap) {
-                    let index = hexmap.coords_to_index(hex_x, hex_y);
+                    let index = hexmap.coords_to_index(hex_x, hex_y).unwrap();
                     let cost = costs[current][plate_num].unwrap() + get_cost(&noise[current], &noise[index]);
                     costs[index][plate_num] = match costs[index][plate_num] {
                         Some(val) if cost >= val => {
@@ -387,7 +387,7 @@ impl Geo {
             visited[*plate_index] = true;
             while let Some(current) = frontier.pop_front() {
                 for (hex_x, hex_y) in hexmap.field[current].get_neighbours(&hexmap) {
-                    let index = hexmap.coords_to_index(hex_x, hex_y);
+                    let index = hexmap.coords_to_index(hex_x, hex_y).unwrap();
                     let neighbour_type = hexmap.field[index].terrain_type;
                     if neighbour_type == *plate_type {
                         if !visited[index] {
@@ -438,7 +438,7 @@ impl Geo {
                 neighbours = vec![0; self.num_plates as usize];
                 // check neighbour types
                 for (hex_x, hex_y) in oldmap.field[index].get_neighbours(&oldmap) {
-                    let index = oldmap.coords_to_index(hex_x, hex_y);
+                    let index = oldmap.coords_to_index(hex_x, hex_y).unwrap();
                     let neighbour_type = oldmap.field[index].terrain_type;
                     if let HexType::Water = neighbour_type {
                         continue;
