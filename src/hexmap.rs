@@ -27,7 +27,7 @@ impl HexMap {
     pub fn new(size_x: u32, size_y: u32) -> HexMap {
         let field: Vec<Hex> = Vec::with_capacity((size_x * size_y) as usize);
         let absolute_size_x = size_x as f32 + 0.5;
-        let absolute_size_y = RATIO + (size_y as f32 - 1.0) * RATIO * 3.0 / 4.0;
+        let absolute_size_y = RATIO + (size_y - 1) as f32 * RATIO * 0.75;
 
         let mut map = HexMap{size_x, size_y, field, absolute_size_x, absolute_size_y};
         for i in 0..(size_x * size_y) {

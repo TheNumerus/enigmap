@@ -114,7 +114,7 @@ impl Basic {
 
         let mut deltas: [(f32, f32);4] = [(0.0, 0.0); 4];
         let mut edges: [f32;4] = [0.0; 4];
-        let point_indices: [usize; 4] = [0,1,4,5];
+        let point_indices: [usize; 4] = [0,2,3,5];
 
         for i in 0..4 {
             deltas[i] = (points[(point_indices[i] + 1) % 6].0 - points[point_indices[i]].0, points[(point_indices[i] + 1) % 6].1 - points[point_indices[i]].1);

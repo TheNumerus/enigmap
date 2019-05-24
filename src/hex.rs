@@ -6,7 +6,6 @@ use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use crate::hexmap::HexMap;
 
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone)]
 /// Data structure for single map tile
 pub struct Hex {
@@ -18,7 +17,7 @@ pub struct Hex {
 }
 
 /// This is roughly ratio of hexagon height to width
-pub const RATIO: f32 = 1.15470053838;
+pub const RATIO: f32 = 1.154_700_538_38;
 
 impl Hex {
     /// Creates new empty 'Hex' with default values
@@ -133,7 +132,6 @@ impl Hex {
     }
 }
 
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone, PartialEq, Copy)]
 /// Type of terrain / feature on specific 'Hex'
 pub enum HexType {
