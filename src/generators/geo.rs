@@ -479,7 +479,7 @@ impl Default for Geo {
 
 impl MapGen for Geo {
     fn generate(&self, hexmap: &mut HexMap) {
-        hexmap.clean_up();
+        hexmap.fill(HexType::Water);
 
         let seed = if self.using_seed {
             self.seed

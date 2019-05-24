@@ -5,7 +5,8 @@ use crate::hex::{Hex, HexType};
 use crate::renderers::{Image, Renderer, ColorMode};
 use crate::renderers::colors::ColorMap;
 
-const SUPERSAMPLE_FACTOR: u32 = 4;
+// 4 samples is overkill
+const SUPERSAMPLE_FACTOR: u32 = 2;
 
 /// Software renderer
 /// 
@@ -123,49 +124,69 @@ impl Basic {
 
         for y in (min_y)..=(max_y) {
             let is_reversed = ((y - min_y) % 2) != 0;
-            let x_range: Box<dyn Iterator<Item = i32>> = if is_reversed {
-                Box::new((min_x..=max_x).rev())
-            } else {
-                Box::new(min_x..=max_x)
-            };
 
-            for (x_index, x) in x_range.enumerate() {
-                let mut in_hex = true;
-                for edge in &edges {
-                    if *edge < 0.0 {
-                        in_hex = false;
-                        break;
+            if is_reversed {
+                for (x_index, x) in (min_x..=max_x).rev().enumerate() {
+                    let mut in_hex = true;
+                    for edge in &edges {
+                        if *edge < 0.0 {
+                            in_hex = false;
+                            break;
+                        }
                     }
-                }
-                // if the first pixel on line is in hex, the whole line is
-                // don't use this rule on edges
-                if x_index == 0 && in_hex && !(min_x == 0 || max_x == (img.width as i32 - 1)) {
-                    // fill whole line
-                    for x in min_x..=max_x {
-                        img.put_pixel(x as u32, y as u32, color);
-                    }
-                    // add all deltas at once
-                    if is_reversed {
+                    // if the first pixel on line is in hex, the whole line is
+                    // don't use this rule on edges
+                    if x_index == 0 && in_hex && !(min_x == 0 || max_x == (img.width as i32 - 1)) {
+                        // fill whole line
+                        for x in min_x..=max_x {
+                            img.put_pixel(x as u32, y as u32, color);
+                        }
+                        // add all deltas at once
                         for (index, edge) in edges.iter_mut().enumerate() {
                             *edge -= (max_x - min_x) as f32 * deltas[index].1;
                         }
-                    } else {
+                        break
+                    }
+                    if in_hex {
+                        img.put_pixel(x as u32, y as u32, color);
+                    }
+
+                    // dont add offset if the tested pixel is last on line
+                    if x_index as i32 != (min_x - max_x).abs() {
+                        for (index, edge) in edges.iter_mut().enumerate() {
+                            *edge -= deltas[index].1;
+                        }
+                    }
+                }
+            } else {
+                for (x_index, x) in (min_x..=max_x).enumerate() {
+                    let mut in_hex = true;
+                    for edge in &edges {
+                        if *edge < 0.0 {
+                            in_hex = false;
+                            break;
+                        }
+                    }
+                    // if the first pixel on line is in hex, the whole line is
+                    // don't use this rule on edges
+                    if x_index == 0 && in_hex && !(min_x == 0 || max_x == (img.width as i32 - 1)) {
+                        // fill whole line
+                        for x in min_x..=max_x {
+                            img.put_pixel(x as u32, y as u32, color);
+                        }
+                        // add all deltas at once
                         for (index, edge) in edges.iter_mut().enumerate() {
                             *edge += (max_x - min_x) as f32 * deltas[index].1;
                         }
+                        break
                     }
-                    break
-                }
-                if in_hex {
-                    img.put_pixel(x as u32, y as u32, color);
-                }
+                    if in_hex {
+                        img.put_pixel(x as u32, y as u32, color);
+                    }
 
-                // dont add offset if the tested pixel is last on line
-                if x_index as i32 != (min_x - max_x).abs() {
-                    for (index, edge) in edges.iter_mut().enumerate() {
-                        if is_reversed {
-                            *edge -= deltas[index].1;
-                        } else {
+                    // dont add offset if the tested pixel is last on line
+                    if x_index as i32 != (min_x - max_x).abs() {
+                        for (index, edge) in edges.iter_mut().enumerate() {
                             *edge += deltas[index].1;
                         }
                     }

@@ -128,9 +128,10 @@ impl HexMap {
         }
     }
 
-    pub fn clean_up(&mut self) {
+    /// Sets all hexes to specified type
+    pub fn fill(&mut self, hextype: HexType) {
         for hex in &mut self.field {
-            hex.terrain_type = HexType::Water;
+            hex.terrain_type = hextype;
         }
     }
 }

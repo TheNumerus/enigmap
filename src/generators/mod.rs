@@ -1,4 +1,5 @@
 use crate::hexmap::HexMap;
+use crate::hex::HexType;
 
 mod circle;
 mod islands;
@@ -29,5 +30,23 @@ pub trait MapGen {
             seed_copy = seed_copy.rotate_left(8);
         }
         array
+    }
+
+    /// Changes type of hexes with neighbours with different type than itself
+    fn clear_pass(&self, hex_map: &mut HexMap, from: HexType, to: HexType, strength: u32) {
+        let old_map = hex_map.clone();
+        for hex in &mut hex_map.field {
+            let mut diff_neighbours = 0;
+            // check for neighbours
+            for (neighbour_x, neighbour_y) in hex.get_neighbours(&old_map) {
+                let index = old_map.coords_to_index(neighbour_x, neighbour_y).unwrap();
+                if hex.terrain_type != old_map.field[index].terrain_type {
+                    diff_neighbours += 1;
+                }
+            }
+            if diff_neighbours > strength && from == hex.terrain_type {
+                hex.terrain_type = to;
+            }
+        }
     }
 }
