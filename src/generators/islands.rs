@@ -11,6 +11,7 @@ use crate::generators::MapGen;
 pub struct Islands {
     seed: u32,
     using_seed: bool,
+    pub ocean_distance: u32
 }
 
 impl Islands {
@@ -36,8 +37,8 @@ impl Islands {
         }
         // clear up ice by removing some isalnds of ice and water
         for _ in 0..2 {
-            self.clear_pass(hex_map, HexType::Water, HexType::Ice, 3);
-            self.clear_pass(hex_map, HexType::Ice, HexType::Water, 3);
+            self.clear_pass(hex_map, HexType::Ocean, HexType::Ice, 3);
+            self.clear_pass(hex_map, HexType::Ice, HexType::Ocean, 3);
         }
     }
 
@@ -48,7 +49,7 @@ impl Islands {
     {
         // generate and clear up small islands
         for hex in &mut hex_map.field {
-            if let HexType::Water = hex.terrain_type {
+            if let HexType::Ocean = hex.terrain_type {
                 let noise_val = gen.get([hex.center_x as f64 * noise_scale + seed as f64, hex.center_y as f64 * noise_scale]);
                 if noise_val > 0.36 {
                     hex.terrain_type = HexType::Field;
@@ -56,8 +57,8 @@ impl Islands {
             }
         }
         for _ in 0..3 {
-            self.clear_pass(hex_map, HexType::Field, HexType::Water, 3);
-            self.clear_pass(hex_map, HexType::Water, HexType::Field, 3);
+            self.clear_pass(hex_map, HexType::Field, HexType::Ocean, 3);
+            self.clear_pass(hex_map, HexType::Ocean, HexType::Field, 3);
         }
 
         // create bigger landmasses
@@ -89,7 +90,7 @@ impl Islands {
             for hex in &mut hex_map.field {
                 // skip tiles that aren't water
                 match hex.terrain_type {
-                    HexType::Water => {},
+                    HexType::Ocean => {},
                     _ => continue
                 };
                 let noise_val = gen.get([hex.center_x as f64 * noise_scale + seed as f64, hex.center_y as f64 * noise_scale]);
@@ -181,42 +182,70 @@ impl Islands {
         }
     }
 
-    /// Generates oceans by changing `HexType::Water` tiles into `HexType::Ocean`
+    /// Generates oceans by changing `HexType::Ocean` tiles into `HexType::Water`
     /// 
     /// Uses same generator as land pass for better ocean generation
     fn ocean_pass<T>(&self, hex_map: &mut HexMap, gen: &T, noise_scale: f64, seed: u32)
         where T:NoiseFn<[f64; 2]>
     {
-        let mut old_field = Vec::new();
-        for hex in &mut hex_map.field {
-            match hex.terrain_type {
-                HexType::Water | HexType::Ice | HexType::Ocean => continue,
-                _ => old_field.push(hex.clone())
-            };
+        let mut land_tiles = 0;
+        // copy only land tiles into 2d array
+        let mut old_field: Vec<Vec<(i32, i32)>> = vec![Vec::new(); hex_map.size_y as usize];
+        for (line_num, line) in &mut hex_map.field.chunks_exact(hex_map.size_x as usize).enumerate() {
+            for hex in line {
+                match hex.terrain_type {
+                    HexType::Water | HexType::Ice | HexType::Ocean => continue,
+                    _ => {
+                        // copy only coordinates
+                        old_field[line_num].push((hex.x, hex.y));
+                        land_tiles+=1;
+                    }
+                };
+            }
         }
-        for hex in &mut hex_map.field {
-            // skip everything thats not water
+
+        // don't even do ocean pass if there isn't land
+        if land_tiles == 0 {
+            return;
+        }
+
+        // modified distance function which works with i32's of hexes
+        let distance_to = |hex_x: i32, hex_y: i32, other_x: i32, other_y: i32| {
+            ((hex_x - other_x).abs() + (hex_x + hex_y - other_x - other_y).abs() + (hex_y - other_y).abs()) as u32 / 2
+        };
+
+        'hex: for hex in &mut hex_map.field {
+            // skip everything thats not ocean
             match hex.terrain_type {
-                HexType::Water => {}, 
+                HexType::Ocean => {}, 
                 _ => continue
             };
             let mut dst_to_land = u32::max_value();
             let noise_val = gen.get([hex.center_x as f64 * noise_scale + seed as f64, hex.center_y as f64 * noise_scale]);
-            // get distance to land
-            for other in &old_field {
-                let dst = hex.distance_to(&other);
-                if dst < dst_to_land {
-                    dst_to_land = dst;
-                }
-            }
-            // spawn oceans
-            if dst_to_land > 5 || noise_val < 0.14 {
-                hex.terrain_type = HexType::Ocean;
-            }
 
-            // make sure we have at least one tile
-            if dst_to_land == 1 {
-                hex.terrain_type = HexType::Water;
+            // get upper and lower boundary on lines in which can land be found
+            let min_y = (hex.y - self.ocean_distance as i32).max(0) as usize;
+            let max_y = (hex.y + self.ocean_distance as i32).min(hex_map.size_y as i32 - 1) as usize;
+
+            // get distance to land
+            for line in &old_field[min_y..=max_y] {
+                let mut distance_in_line = u32::max_value();
+                for other in line {
+                    let dst = distance_to(hex.x, hex.y, other.0, other.1);
+                    // if the second hex on line is further away, don't even compute the whole line
+                    if dst > distance_in_line {
+                        break;
+                    }
+                    distance_in_line = dst;
+                    if dst < dst_to_land {
+                        dst_to_land = dst;
+                        // spawn water and make sure we have at least one tile
+                        if dst_to_land <= self.ocean_distance && noise_val >= 0.14 || dst_to_land == 1 {
+                            hex.terrain_type = HexType::Water;
+                            continue 'hex;
+                        }
+                    }
+                }
             }
         }
         //clear that up a little bit
@@ -226,13 +255,13 @@ impl Islands {
 
 impl Default for Islands {
     fn default() -> Islands {
-        Islands{seed: 0, using_seed: false}
+        Islands{seed: 0, using_seed: false, ocean_distance: 5}
     }
 }
 
 impl MapGen for Islands {
     fn generate(&self, hex_map: &mut HexMap) {
-        hex_map.fill(HexType::Water);
+        hex_map.fill(HexType::Ocean);
 
         // init generators
         let w = Worley::new();

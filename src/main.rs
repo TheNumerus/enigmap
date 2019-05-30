@@ -53,11 +53,11 @@ fn main() {
         gen.generate(&mut hexmap);
     }, "Generation", 1);
     
-    let mut img = Image::new(1, 1, ColorMode::Rgb);
+    let mut img = None;
 
     // render image
     bencher(| | {
-        img = renderer.render(&hexmap);
+        img = Some(renderer.render(&hexmap));
     }, "Rendering", 1);
 
     // create folder for image if needed
@@ -65,6 +65,8 @@ fn main() {
     if !Path::new(path).exists() {
         fs::create_dir("./out").unwrap();
     }
+
+    let img = img.unwrap();
 
     // save image
     bencher(| | {
@@ -77,8 +79,6 @@ fn main() {
 
         let mut writer = encoder.write_header().unwrap();
         writer.write_image_data(img.buffer()).unwrap();
-        //let img: ImageBuffer<Rgb<u8>, Vec<u8>> = ImageBuffer::from_raw(img.width(), img.height(), img.buffer().to_vec()).unwrap();
-        //img.save("./out/image.png").unwrap();
     }, "Saving", 1);
 }
 
