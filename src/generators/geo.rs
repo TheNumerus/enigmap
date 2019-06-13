@@ -115,7 +115,10 @@ impl Geo {
             let search_area = hex.get_spiral(hexmap, radius);
             let mut pressure = (0.0, 0.0);
             for (hex_x, hex_y) in &search_area {
-                let index = hexmap.coords_to_index(*hex_x, *hex_y).unwrap();
+                let index = match hexmap.coords_to_index(*hex_x, *hex_y) {
+                    Some(value) => value,
+                    None => continue
+                };
                 let dir = plates.directions[plates.indices[index].1];
                 pressure.0 += dir.0;
                 pressure.1 += dir.1;
@@ -169,7 +172,10 @@ impl Geo {
             let coords = hexmap.index_to_coords(index as u32);
             let search_area = Hex::from_coords(coords.0, coords.1).get_spiral(hexmap, 1);
             for (hex_x, hex_y) in &search_area {
-                let index = hexmap.coords_to_index(*hex_x, *hex_y).unwrap();
+                let index = match hexmap.coords_to_index(*hex_x, *hex_y) {
+                    Some(value) => value,
+                    None => continue
+                };
                 let count = counts[index];
                 c += count as f32;
             }
@@ -197,7 +203,10 @@ impl Geo {
             let search_area = Hex::from_coords(coords.0, coords.1).get_spiral(hexmap, radius);
             let mut height_avg = 0.0;
             for (hex_x, hex_y) in &search_area {
-                let index = hexmap.coords_to_index(*hex_x, *hex_y).unwrap();
+                let index = match hexmap.coords_to_index(*hex_x, *hex_y) {
+                    Some(value) => value,
+                    None => continue
+                };
                 height_avg += heights_copy[index];
             }
             height_avg /= search_area.len() as f32;

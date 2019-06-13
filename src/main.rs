@@ -1,6 +1,6 @@
 use enigmap::{
     prelude::*,
-    renderers::{Basic, OGL, Sprite, Image, ColorMode},
+    renderers::{Basic, OGL, Sprite},
     generators::{Circle, Islands, Geo, Debug}
 };
 

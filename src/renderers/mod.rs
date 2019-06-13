@@ -58,7 +58,7 @@ pub trait Renderer {
         let tiles_x = ((map.absolute_size_x * multiplier) / tile_size as f32).ceil() as u32;
         let target_size_x = (map.absolute_size_x * multiplier) as u32;
         let target_size_y = (map.absolute_size_y * multiplier) as u32;
-        let image = Image::from_fn(target_size_x, target_size_y, |x, y| {
+        Image::from_fn(target_size_x, target_size_y, |x, y| {
             let tile_x = x / tile_size;
             let tile_y = y / tile_size;
             let tile_idx = (tile_x + tile_y * tiles_x) as usize;
@@ -74,8 +74,7 @@ pub trait Renderer {
             } else {
                 [tiles[tile_idx][index], tiles[tile_idx][index + 1], tiles[tile_idx][index + 2]]
             }
-        });
-        image
+        })
     }
 
     /// Should the map repeat on the X axis
