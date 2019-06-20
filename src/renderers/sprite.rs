@@ -451,7 +451,7 @@ impl Renderer for Sprite {
             }
         }
         debug_println!("tiles rendered");
-        self.tiles_to_image(&tiles, map, self.multiplier, true, self.tile_size)
+        self.tiles_to_image(&tiles, map, self.multiplier, true, self.tile_size as usize)
     }
 
     fn set_scale(&mut self, scale: f32) {

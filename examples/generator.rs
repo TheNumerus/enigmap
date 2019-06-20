@@ -76,6 +76,9 @@ fn main() {
 
         let mut encoder = png::Encoder::new(w, img.width(), img.height());
         encoder.set(png::ColorType::RGB).set(png::BitDepth::Eight);
+        if img.is_rgba() {
+            encoder.set(png::ColorType::RGBA);
+        }
 
         let mut writer = encoder.write_header().unwrap();
         writer.write_image_data(img.buffer()).unwrap();

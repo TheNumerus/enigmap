@@ -54,27 +54,41 @@ pub trait Renderer {
     }
 
     /// Returns image generated from tiles
-    fn tiles_to_image(&self, tiles: &[Vec<u8>], map: &HexMap, multiplier: f32, fix_gamma: bool, tile_size: u32) -> Image {
-        let tiles_x = ((map.absolute_size_x * multiplier) / tile_size as f32).ceil() as u32;
-        let target_size_x = (map.absolute_size_x * multiplier) as u32;
-        let target_size_y = (map.absolute_size_y * multiplier) as u32;
-        Image::from_fn(target_size_x, target_size_y, |x, y| {
-            let tile_x = x / tile_size;
-            let tile_y = y / tile_size;
-            let tile_idx = (tile_x + tile_y * tiles_x) as usize;
-            let x = x - tile_x * tile_size;
-            let y = y - tile_y * tile_size;
-            let index = 4 * (x + y * tile_size) as usize;
-            // remove alpha channel
-            if fix_gamma {
-                let r = (tiles[tile_idx][index] as f32 / 255.0).powf(2.2) * 255.0;
-                let g = (tiles[tile_idx][index + 1] as f32 / 255.0).powf(2.2) * 255.0;
-                let b = (tiles[tile_idx][index + 2] as f32 / 255.0).powf(2.2) * 255.0;
-                [r as u8, g as u8, b as u8]
-            } else {
-                [tiles[tile_idx][index], tiles[tile_idx][index + 1], tiles[tile_idx][index + 2]]
+    fn tiles_to_image(&self, tiles: &[Vec<u8>], map: &HexMap, multiplier: f32, fix_gamma: bool, tile_size: usize) -> Image {
+        const CHANNELS: usize = 4;
+
+        let tiles_x = ((map.absolute_size_x * multiplier) / tile_size as f32).ceil() as usize;
+        let target_size_x = (map.absolute_size_x * multiplier) as usize;
+        let target_size_y = (map.absolute_size_y * multiplier) as usize;
+
+        // create buffer by copying values from tiles
+        let mut buffer = vec![0_u8; target_size_x * target_size_y * CHANNELS];
+
+        for y in 0..target_size_y {
+            let line_start = target_size_x * y * CHANNELS;
+            for x in 0..tiles_x {
+                let lower_bound = x * tile_size * CHANNELS + line_start;
+
+                // handle tiles that are cut
+                let upper_bound = ((x + 1) * tile_size).min(target_size_x) * CHANNELS + line_start;
+
+                // get line slice from the buffer to copy values into
+                let (_, slice) = buffer.split_at_mut(lower_bound);
+                let (slice, _) = slice.split_at_mut(upper_bound - lower_bound);
+
+                let tile_splice_start = tile_size * (y % tile_size) * CHANNELS;
+                let tile_index = (y / tile_size) * tiles_x + x;
+                slice.copy_from_slice(&tiles[tile_index][(tile_splice_start)..(tile_splice_start + upper_bound - lower_bound)]);
             }
-        })
+        }
+
+        if fix_gamma {
+            for x in &mut buffer {
+                *x = ((*x as f32 / 255.0).powf(2.2) * 255.0) as u8;
+            }
+        }
+
+        Image::from_buffer(target_size_x as u32, target_size_y as u32, buffer, ColorMode::Rgba)
     }
 
     /// Should the map repeat on the X axis
@@ -91,7 +105,7 @@ pub struct Image {
 
 impl Image {
     pub fn new(width: u32, height: u32, color_mode: ColorMode) -> Image {
-        let buffer = vec![0;(width * height * 3) as usize];
+        let buffer = vec![0;(width * height * color_mode as u32) as usize];
         Image{width, height, buffer, color_mode}
     }
 
@@ -164,13 +178,23 @@ impl Image {
     }
 
     #[inline(always)]
+    pub fn is_rgba(&self) -> bool {
+        match self.color_mode {
+            ColorMode::Rgb => false,
+            ColorMode::Rgba => true
+        }
+    }
+
+    #[inline(always)]
     pub fn get_pixel(&self, x: u32, y: u32) -> &[u8] {
         let index = ((x + y * self.width) * 3) as usize;
         &self.buffer[index..index + 3]
     }
 }
 
+
+#[derive(Copy, Clone)]
 pub enum ColorMode {
-    Rgb,
-    Rgba
+    Rgb = 3,
+    Rgba = 4
 }
