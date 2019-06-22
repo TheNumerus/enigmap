@@ -44,7 +44,7 @@ fn main() {
     let mut renderer: Box<dyn Renderer> = match ren_choice {
         0 => Box::new(Basic::default()),
         1 => Box::new(OGL::default()),
-        2 | _ => Box::new(Sprite::from_folder("./textures"))
+        2 | _ => Box::new(Sprite::from_folder("./examples/textures"))
     };
     renderer.set_scale(20.0);
 

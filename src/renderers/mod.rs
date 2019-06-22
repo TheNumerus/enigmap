@@ -54,7 +54,7 @@ pub trait Renderer {
     }
 
     /// Returns image generated from tiles
-    fn tiles_to_image(&self, tiles: &[Vec<u8>], map: &HexMap, multiplier: f32, fix_gamma: bool, tile_size: usize) -> Image {
+    fn tiles_to_image(&self, tiles: &[Vec<u8>], map: &HexMap, multiplier: f32, tile_size: usize) -> Image {
         const CHANNELS: usize = 4;
 
         let tiles_x = ((map.absolute_size_x * multiplier) / tile_size as f32).ceil() as usize;
@@ -79,12 +79,6 @@ pub trait Renderer {
                 let tile_splice_start = tile_size * (y % tile_size) * CHANNELS;
                 let tile_index = (y / tile_size) * tiles_x + x;
                 slice.copy_from_slice(&tiles[tile_index][(tile_splice_start)..(tile_splice_start + upper_bound - lower_bound)]);
-            }
-        }
-
-        if fix_gamma {
-            for x in &mut buffer {
-                *x = ((*x as f32 / 255.0).powf(2.2) * 255.0) as u8;
             }
         }
 

@@ -296,6 +296,39 @@ impl Renderer for Sprite {
         let mut instances_cover = HashMap::new();
 
         let mut rng = thread_rng();
+
+        // create instances of debug hexes
+        let instances_debug = {
+            #[derive(Copy, Clone)]
+            struct Attr {
+                world_position: (f32, f32),
+                color: (f32, f32, f32)
+            }
+
+            implement_vertex!(Attr, world_position, color);
+
+            let data = map.field.iter().filter_map(|hex| {
+                let color = match hex.terrain_type {
+                    HexType::Debug(val) => (val, val, val),
+                    HexType::Debug2d((val_x , val_y)) => (val_x, val_y , 0.0),
+                    _ => return None
+                };
+                let mut vec: Vec<Attr> = Vec::new();
+                vec.push(Attr {
+                    world_position: (hex.center_x - 0.5, hex.center_y - RATIO / 2.0),
+                    color
+                });
+                if self.wrap_map {
+                    vec.push(Attr{world_position: (vec[0].world_position.0 - map.size_x as f32, vec[0].world_position.1), ..vec[0]});
+                    vec.push(Attr{world_position: (vec[0].world_position.0 + map.size_x as f32, vec[0].world_position.1), ..vec[0]});
+                }
+                Some(vec)
+            }).flatten().collect::<Vec<_>>();
+
+            vertex::VertexBuffer::new(&display, &data).unwrap()
+        };
+
+
         let hex_type_map = HexType::get_string_map();
 
         for key in hex_type_map.keys() {
@@ -340,7 +373,7 @@ impl Renderer for Sprite {
                     }
                     Some(vec)
                 }).flatten().collect::<Vec<_>>();
-                let v_buffer = vertex::VertexBuffer::dynamic(&display, &data).unwrap();
+                let v_buffer = vertex::VertexBuffer::new(&display, &data).unwrap();
                 if i == 1 {
                     instances.insert(key.to_owned(), v_buffer);
                 } else {
@@ -378,7 +411,7 @@ impl Renderer for Sprite {
                         }
                         Some(vec)
                     }).flatten().collect::<Vec<_>>();
-                    let v_buffer = vertex::VertexBuffer::dynamic(&display, &data).unwrap();
+                    let v_buffer = vertex::VertexBuffer::new(&display, &data).unwrap();
                     instances_cover.insert(key.to_owned(), v_buffer);
                 }
             }
@@ -386,13 +419,16 @@ impl Renderer for Sprite {
 
         // keep shaders in different files and include them on compile
         let vertex_shader_src = include_str!("vert_sprite.glsl");
+        let vertex_shader_debug_src = include_str!("vert.glsl");
         let fragment_shader_src = include_str!("frag_sprite.glsl");
         let fragment_shader_cover_src = include_str!("frag_sprite_cover.glsl");
+        let fragment_debug_src = include_str!("frag.glsl");
 
         let program = Program::from_source(&display, vertex_shader_src, fragment_shader_src, None).unwrap();
         let program_cover = Program::from_source(&display, vertex_shader_src, fragment_shader_cover_src, None).unwrap();
+        let program_debug = Program::from_source(&display, vertex_shader_debug_src, fragment_debug_src, None).unwrap();
 
-        debug_println!("program generated");
+        debug_println!("programs generated");
 
         let mut tiles: Vec<Vec<u8>> = vec![];
 
@@ -405,6 +441,18 @@ impl Renderer for Sprite {
                     target.clear_color(0.79, 0.82, 0.8, 1.0);
                 }
                 target.clear_depth(1.0);
+                // render debug hexes
+                let uniforms = uniform! {
+                    total_x: map.absolute_size_x,
+                    total_y: map.absolute_size_y,
+                    win_size: self.tile_size as f32,
+                    mult: self.multiplier,
+                    tile_x: x as f32,
+                    tile_y: y as f32
+                };
+                target.draw((&vertex_buffer, instances_debug.per_instance().unwrap()),
+                    &indices, &program_debug, &uniforms, &Default::default()).unwrap();
+
                 // render hexes
                 for key in instances.keys() {
                     let uniforms = uniform! {
@@ -451,7 +499,7 @@ impl Renderer for Sprite {
             }
         }
         debug_println!("tiles rendered");
-        self.tiles_to_image(&tiles, map, self.multiplier, true, self.tile_size as usize)
+        self.tiles_to_image(&tiles, map, self.multiplier, self.tile_size as usize)
     }
 
     fn set_scale(&mut self, scale: f32) {

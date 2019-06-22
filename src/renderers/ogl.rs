@@ -106,7 +106,7 @@ impl Renderer for OGL {
                 vec
             }).flatten().collect::<Vec<_>>();
 
-            vertex::VertexBuffer::dynamic(&display, &data).unwrap()
+            vertex::VertexBuffer::new(&display, &data).unwrap()
         };
 
         // keep shaders in different files and include them on compile
@@ -147,7 +147,7 @@ impl Renderer for OGL {
             }
         }
         debug_println!("tiles rendered");
-        self.tiles_to_image(&tiles, map, self.multiplier, false, self.tile_size as usize)
+        self.tiles_to_image(&tiles, map, self.multiplier, self.tile_size as usize)
     }
 
     fn set_scale(&mut self, scale: f32) {
