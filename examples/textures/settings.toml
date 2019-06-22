@@ -4,3 +4,6 @@ render_in_25d = ["Mountain", "Forest", "Jungle"]
 
 [variations]
 Field = 2
+
+[variations_cover]
+Forest = 2

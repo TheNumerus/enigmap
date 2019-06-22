@@ -213,6 +213,25 @@ impl From<i32> for HexType {
     }
 }
 
+impl From<HexType> for String {
+    fn from(ht: HexType) -> String {
+        match ht {
+            HexType::Field => String::from("Field"),
+            HexType::Forest => String::from("Forest"),
+            HexType::Desert => String::from("Desert"),
+            HexType::Tundra => String::from("Tundra"),
+            HexType::Water => String::from("Water"),
+            HexType::Ocean => String::from("Ocean"),
+            HexType::Mountain => String::from("Mountain"),
+            HexType::Impassable => String::from("Impassable"),
+            HexType::Ice => String::from("Ice"),
+            HexType::Jungle => String::from("Jungle"),
+            HexType::Debug(val) => String::from(format!("Debug: {}", val)),
+            HexType::Debug2d((x,y)) => String::from(format!("Debug2d: {}, {}", x, y))
+        }
+    }
+}
+
 impl HexType {
     pub fn get_string_map() -> HashMap<String, HexType> {
         let mut map: HashMap<String, HexType> = HashMap::new();

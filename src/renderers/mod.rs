@@ -8,7 +8,7 @@ pub mod colors;
 
 pub use self::basic::Basic;
 pub use self::ogl::OGL;
-pub use self::sprite::Sprite;
+pub use self::sprite::*;
 
 /// Trait for `HexMap` renderers
 pub trait Renderer {
@@ -90,6 +90,7 @@ pub trait Renderer {
 }
 
 /// Helper struct for RGB images
+#[derive(Debug, Clone)]
 pub struct Image {
     width: u32,
     height: u32,
@@ -187,7 +188,7 @@ impl Image {
 }
 
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum ColorMode {
     Rgb = 3,
     Rgba = 4
