@@ -1,6 +1,6 @@
 random_rotation = ["Field"]
 random_color = true
-render_in_25d = ["Mountain", "Forest", "Jungle"]
+render_in_25d = ["Forest", "Jungle"]
 
 [variations]
 Field = 2

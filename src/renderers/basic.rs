@@ -18,7 +18,9 @@ pub struct Basic {
     /// Randomize colors slightly
     randomize_colors: bool,
     /// Use anti-aliasing when rendering
-    antialiasing: bool
+    antialiasing: bool,
+    /// Colormap used when rendering
+    pub colors: ColorMap
 }
 
 impl Basic {
@@ -199,7 +201,7 @@ impl Basic {
         }
     }
 
-    fn render_hex(&self, image: &mut Image, hex: &Hex, width: u32, colors: &ColorMap, render_wrapped: RenderWrapped) {
+    fn render_hex(&self, image: &mut Image, hex: &Hex, width: u32, render_wrapped: RenderWrapped) {
         let mut rng = thread_rng();
         // randomize color a little bit
         let color_diff = rng.gen_range(0.98, 1.02);
@@ -229,7 +231,7 @@ impl Basic {
                 [clamp_color(r * 255.0), clamp_color(g * 255.0), 0]
             },
             _ => {
-                let color = colors.get_color_u8(&hex.terrain_type);
+                let color = self.colors.get_color_u8(&hex.terrain_type);
                 [color.0, color.1, color.2]
             }
         };
@@ -280,7 +282,6 @@ impl Basic {
 
         let mut image_supersampled = Image::new(width * SUPERSAMPLE_FACTOR, height * SUPERSAMPLE_FACTOR, ColorMode::Rgb);
 
-        let colors = ColorMap::new();
         for (index, hex) in map.field.iter().enumerate() {
             let wrapping = if self.wrap_map && index as u32 % map.size_x == 0 {
                 RenderWrapped::Right
@@ -289,9 +290,8 @@ impl Basic {
             } else {
                 RenderWrapped::None
             };
-            self.render_hex(&mut image_supersampled, hex, map.size_x, &colors, wrapping);
+            self.render_hex(&mut image_supersampled, hex, map.size_x, wrapping);
         }
-
 
         // downsample
         for x in 0..width {
@@ -328,7 +328,7 @@ impl Basic {
 
 impl Default for Basic {
     fn default() -> Basic {
-        Basic{multiplier: 50.0, wrap_map: true, randomize_colors: true, antialiasing: true}
+        Basic{multiplier: 50.0, wrap_map: true, randomize_colors: true, antialiasing: true, colors: ColorMap::new()}
     }
 }
 
@@ -342,8 +342,6 @@ impl Renderer for Basic {
         let height = (map.absolute_size_y * self.multiplier) as u32;
         let mut image = Image::new(width, height, ColorMode::Rgb);
 
-        let colors = ColorMap::new();
-
         for (index, hex) in map.field.iter().enumerate() {
             let wrapping = if self.wrap_map && index as u32 % map.size_x == 0 {
                 RenderWrapped::Right
@@ -352,7 +350,7 @@ impl Renderer for Basic {
             } else {
                 RenderWrapped::None
             };
-            self.render_hex(&mut image, hex, map.size_x, &colors, wrapping);
+            self.render_hex(&mut image, hex, map.size_x, wrapping);
         }
         image
     }

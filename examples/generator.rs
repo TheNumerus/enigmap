@@ -1,7 +1,8 @@
 use enigmap::{
     prelude::*,
     renderers::{Basic, OGL, Sprite},
-    generators::{Circle, Islands, Geo, Debug}
+    generators::{Circle, Islands, Geo, Debug},
+    HexType
 };
 
 use std::{
@@ -42,9 +43,26 @@ fn main() {
     // select renderer
     let ren_choice = get_u32("renderer choice (0 - basic, 1 - OGL, 2..inf - sprite)", 0);
     let mut renderer: Box<dyn Renderer> = match ren_choice {
-        0 => Box::new(Basic::default()),
-        1 => Box::new(OGL::default()),
-        2 | _ => Box::new(Sprite::from_folder("./examples/textures"))
+        0 => {
+            let mut ren = Basic::default();
+            // change color of water tiles
+            ren.colors.set_color_u8(HexType::Water, (20, 140, 180));
+            Box::new(ren)
+        },
+        1 => {
+            let mut ren = OGL::default();
+            // change color of oceans
+            ren.colors.set_color_f32(HexType::Ocean, (0.1, 0.3, 0.5));
+            Box::new(ren)
+        },
+        2 | _ => {
+            let mut ren = Sprite::from_folder("./examples/textures");
+            // 2x2 RGBA grey checkerboard pattern 
+            let texture_data = [40, 40, 40, 255, 80, 80, 80, 255, 80, 80, 80, 255, 40, 40, 40, 255];
+            // set mountain texture to provided data
+            ren.set_texture(&texture_data, 2, 2, HexType::Mountain, false);
+            Box::new(ren)
+        }
     };
     renderer.set_scale(20.0);
 

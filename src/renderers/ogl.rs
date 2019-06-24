@@ -17,7 +17,9 @@ pub struct OGL {
     /// Randomize colors slightly
     randomize_colors: bool,
     /// Size of tiles rendered
-    tile_size: u32
+    tile_size: u32,
+    /// Colormap used while rendering
+    pub colors: ColorMap
 }
 
 impl OGL {
@@ -40,8 +42,6 @@ impl OGL {
 impl Renderer for OGL {
 
     fn render(&self, map: &HexMap) -> Image {
-        let colors = ColorMap::new();
-
         let w = self.tile_size as f64;
         let h = w;
         let tiles_x = ((map.absolute_size_x * self.multiplier) / self.tile_size as f32).ceil() as u32;
@@ -80,7 +80,7 @@ impl Renderer for OGL {
                     HexType::Debug(val) => (val, val, val),
                     HexType::Debug2d((val_x , val_y)) => (val_x, val_y , 0.0),
                     _ => {
-                        let color = colors.get_color_f32(&hex.terrain_type);
+                        let color = self.colors.get_color_f32(&hex.terrain_type);
                         (color.r, color.g, color.b)
                     }
                 };
@@ -166,7 +166,7 @@ impl Renderer for OGL {
 
 impl Default for OGL {
     fn default() -> OGL {
-        OGL{multiplier: 50.0, wrap_map: true, randomize_colors: true, tile_size: 1024}
+        OGL{multiplier: 50.0, wrap_map: true, randomize_colors: true, tile_size: 1024, colors: ColorMap::new()}
     }
 }
 
