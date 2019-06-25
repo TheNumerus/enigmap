@@ -120,22 +120,22 @@ impl Renderer for OGL {
         let mut tiles: Vec<Vec<u8>> = vec![];
 
         // rendering
+        let scale = self.multiplier / self.tile_size as f32 * 2.0;
 
         for y in 0..tiles_y {
             for x in 0..tiles_x {
                 let mut target = display.draw();
                 target.clear_color(0.0, 0.0, 0.0, 1.0);
-                if self.wrap_map {
-                    target.clear_color(0.79, 0.82, 0.8, 1.0);
-                }
-                let uniforms = uniform! {
-                    total_x: map.absolute_size_x,
-                    total_y: map.absolute_size_y,
-                    win_size: self.tile_size as f32,
-                    mult: self.multiplier,
-                    tile_x: x as f32,
-                    tile_y: y as f32
-                };
+
+                // x and y are tile offsets
+                let transform: [[f32; 4]; 4] = [
+                    [scale, 0.0, 0.0, -1.0 - x as f32 * 2.0],
+                    [0.0, scale, 0.0, -1.0 - y as f32 * 2.0],
+                    [0.0, 0.0, 1.0, 0.0],
+                    [0.0, 0.0, 0.0, 1.0]
+                ];
+
+                let uniforms = uniform!{transform: transform};
                 target.draw((&vertex_buffer, per_instance.per_instance().unwrap()),
                     &indices, &program, &uniforms, &Default::default()).unwrap();
                 target.finish().unwrap();

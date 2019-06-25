@@ -1,11 +1,6 @@
 #version 140
 
-uniform float total_x;
-uniform float total_y;
-uniform float tile_x;
-uniform float tile_y;
-uniform float mult;
-uniform float win_size;
+uniform mat4x4 transform;
 
 in vec3 position;
 in vec2 world_position;
@@ -18,11 +13,10 @@ out float v_color_diff;
 
 void main() {
     float half_ratio = 1.1547 / 2.0;
-    vec2 xy = vec2(position.x - 0.5, position.y - half_ratio);
-    xy *= rotation;
-    float x = ((xy.x + world_position.x + 0.5) * 2)/(win_size / mult) - 1 - 2 * tile_x;
-    float y = ((xy.y + world_position.y + half_ratio) * 2)/(win_size / mult) - 1 - 2 * tile_y;
-    gl_Position = vec4(x, y, position.z, 1.0);
+    vec2 rot_center = vec2(0.5, half_ratio);
+    // center hex, rotate it and put it back in
+    vec2 xy = (position.xy - rot_center) * rotation + rot_center;
+    gl_Position = vec4(xy + world_position, position.z, 1.0) * transform;
     v_color_diff = color_diff;
     v_tex_coords = tex_coords;
 }
