@@ -10,6 +10,9 @@ pub use self::basic::Basic;
 pub use self::ogl::OGL;
 pub use self::sprite::*;
 
+const HALF_RATIO: f32 = RATIO / 2.0;
+const QUARTER_RATIO: f32 = RATIO / 4.0;
+
 /// Trait for `HexMap` renderers
 pub trait Renderer {
     /// Main function used when rendering `HexMap`
@@ -35,21 +38,17 @@ pub trait Renderer {
             panic!("index out of range")
         }
         // get hex relative coords
-        let sides_x = 0.5;
-        let sides_y = RATIO / 4.0;
-        let bottom_y = RATIO / 2.0;
         let mut coords = match index {
-            0 => (sides_x, -sides_y),
-            1 => (sides_x, sides_y),
-            2 => (0.0, bottom_y),
-            3 => (-sides_x, sides_y),
-            4 => (-sides_x, -sides_y),
-            _ => (0.0, -bottom_y),
+            0 => (0.5, -QUARTER_RATIO),
+            1 => (0.5, QUARTER_RATIO),
+            2 => (0.0, HALF_RATIO),
+            3 => (-0.5, QUARTER_RATIO),
+            4 => (-0.5, -QUARTER_RATIO),
+            _ => (0.0, -HALF_RATIO),
         };
         // add absolute coords
         coords.0 += hex.center_x;
         coords.1 += hex.center_y;
-        // multiply by multiplier
         (coords.0, coords.1)
     }
 
@@ -114,6 +113,17 @@ impl Image {
         self.buffer[index] = color[0];
         self.buffer[index + 1] = color[1];
         self.buffer[index + 2] = color[2];
+    }
+
+    #[inline(always)]
+    pub fn put_hor_line(&mut self, x: (u32, u32), y: u32, color: [u8;3]) {
+        let start = ((x.0 + y * self.width) * 3) as usize;
+        let len = (x.1 - x.0) as usize * 3;
+        for pixel in self.buffer[start..(start + len)].chunks_exact_mut(3) {
+            pixel[0] = color[0];
+            pixel[1] = color[1];
+            pixel[2] = color[2];
+        }
     }
 
     #[inline(always)]
