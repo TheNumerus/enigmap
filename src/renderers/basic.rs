@@ -1,17 +1,17 @@
-use std::time::Instant;
+use crossbeam::thread;
+use std::sync::Arc;
 
 use rand::prelude::*;
+use num_cpus;
 
 use crate::hexmap::HexMap;
 use crate::hex::{Hex, HexType};
 use crate::renderers::{Image, Renderer, ColorMode};
 use crate::renderers::colors::ColorMap;
 
-// 4x4 samples is overkill
-const SUPERSAMPLE_FACTOR: u32 = 2;
-
 /// Software renderer
 /// 
+#[derive(Clone, Debug)]
 pub struct Basic {
     /// Size of `Hex` on X axis in pixels
     multiplier: f32,
@@ -103,7 +103,7 @@ impl Basic {
         }
     }
 
-    fn render_hex_to_image (&self, points: &[(f32, f32);6], img: &mut Image, color: [u8;3], is_bottom_row: bool) {
+    fn render_hex_to_image (&self, points: &[(f32, f32);6], img: &mut Image, color: [u8;3], is_bottom_row: bool, pixel_offset: (f32, f32)) {
         // points are in this order
         //     0
         //  1     5
@@ -129,7 +129,7 @@ impl Basic {
 
         for i in 0..4 {
             deltas[i] = (points[(point_indices[i] + 1) % 6].0 - points[point_indices[i]].0, points[(point_indices[i] + 1) % 6].1 - points[point_indices[i]].1);
-            edges[i] = ((min_x as f32 + 0.5 - points[point_indices[i]].0) * deltas[i].1) - ((min_y as f32 + 0.5 - points[point_indices[i]].1) * deltas[i].0);
+            edges[i] = ((min_x as f32 + pixel_offset.0 - points[point_indices[i]].0) * deltas[i].1) - ((min_y as f32 + pixel_offset.1 - points[point_indices[i]].1) * deltas[i].0);
         }
 
         let check_inside = |edges: &mut[f32]| {
@@ -322,126 +322,155 @@ impl Basic {
         }
     }
 
-    fn render_hex(&self, image: &mut Image, hex: &Hex, width: u32, render_wrapped: RenderWrapped, is_bottom_row: bool) {
-        let mut rng = thread_rng();
-        // randomize color a little bit
-        let color_diff = rng.gen_range(0.98, 1.02);
-
+    fn render_hex(&self, image: &mut Image, hex: &Hex, width: u32, render_wrapped: RenderWrapped, is_bottom_row: bool, pixel_offset: (f32, f32), color: [u8;3]) {
         // get hex vertices positions
         // points need to be in counter clockwise order
         let mut points = [(0.0, 0.0);6];
         for index in 0..6 {
             let coords = self.get_hex_vertex(hex, index);
-            if self.antialiasing {
-                points[5 - index] = (coords.0 * self.multiplier * SUPERSAMPLE_FACTOR as f32, coords.1 * self.multiplier * SUPERSAMPLE_FACTOR as f32);
-            } else {
-                points[5 - index] = (coords.0 * self.multiplier, coords.1 * self.multiplier);
-            }
+            points[5 - index] = (coords.0 * self.multiplier, coords.1 * self.multiplier);
         };
 
-        let clamp_color = |value: f32| {
-            (value).max(0.0).min(255.0) as u8
-        };
-
-        let mut color = match hex.terrain_type {
-            HexType::Debug(val) => {
-                let value = clamp_color(val * 255.0);
-                [value, value, value]
-            },
-            HexType::Debug2d((r,g)) => {
-                [clamp_color(r * 255.0), clamp_color(g * 255.0), 0]
-            },
-            _ => {
-                let color = self.colors.get_color_u8(&hex.terrain_type);
-                [color.0, color.1, color.2]
-            }
-        };
-
-        // dont't randomize color of debug hexes
-        if self.randomize_colors {
-            match hex.terrain_type {
-                HexType::Debug(_) | HexType::Debug2d(_) => {},
-                _ => {
-                    for i in 0..3 {
-                        color[i] = clamp_color(f32::from(color[i]) * color_diff);
-                    }
-                }
-            }
-        }
-
-        self.render_hex_to_image(&points, image, color, is_bottom_row);
-
-        let scale = if self.antialiasing {
-            SUPERSAMPLE_FACTOR as f32
-        } else {
-            1.0
-        };
+        self.render_hex_to_image(&points, image, color, is_bottom_row, pixel_offset);
 
         match render_wrapped {
             RenderWrapped::None => {},
             RenderWrapped::Left => {
                 // subtract offset
                 for index in 0..6 {
-                    points[index].0 -= scale * width as f32 * self.multiplier;
+                    points[index].0 -= width as f32 * self.multiplier;
                 };
-                self.render_hex_to_image(&points, image, color, is_bottom_row);
+                self.render_hex_to_image(&points, image, color, is_bottom_row, pixel_offset);
             },
             RenderWrapped::Right => {
                 // add offset
                 for index in 0..6 {
-                    points[index].0 += scale * width as f32 * self.multiplier;
+                    points[index].0 += width as f32 * self.multiplier;
                 };
-                self.render_hex_to_image(&points, image, color, is_bottom_row);
+                self.render_hex_to_image(&points, image, color, is_bottom_row, pixel_offset);
             }
         };
     }
 
     fn render_aa_image(&self, map: &HexMap) -> Image {
-        //let time = Instant::now();
         let width = (map.absolute_size_x * self.multiplier) as u32;
         let height = (map.absolute_size_y * self.multiplier) as u32;
-        let mut image_final = Image::new(width, height, ColorMode::Rgb);
 
-        let mut image_supersampled = Image::new(width * SUPERSAMPLE_FACTOR, height * SUPERSAMPLE_FACTOR, ColorMode::Rgb);
+        let mut wrappings = vec![RenderWrapped::None; map.get_area() as usize];
 
-        for (index, hex) in map.field.iter().enumerate() {
-            let wrapping = if self.wrap_map && index as u32 % map.size_x == 0 {
-                RenderWrapped::Right
+        for index in 0..map.get_area() as usize {
+            if self.wrap_map && index as u32 % map.size_x == 0 {
+                wrappings[index] = RenderWrapped::Right;
             } else if self.wrap_map && index as u32 % map.size_x == (map.size_x - 1) {
-                RenderWrapped::Left
-            } else {
-                RenderWrapped::None
-            };
-            // check bottom row
-            if hex.y as u32 == map.size_y - 1 {
-                self.render_hex(&mut image_supersampled, hex, map.size_x, wrapping, true);
-            } else {
-                self.render_hex(&mut image_supersampled, hex, map.size_x, wrapping, false);
+                wrappings[index] = RenderWrapped::Left;
             }
         }
 
-        // downsample
-        for x in 0..width {
-            for y in 0..height {
-                let mut total_red = 0;
-                let mut total_green = 0;
-                let mut total_blue = 0;
-                for i in 0..SUPERSAMPLE_FACTOR {
-                    for j in 0..SUPERSAMPLE_FACTOR {
-                        let pixel = image_supersampled.get_pixel((SUPERSAMPLE_FACTOR * x) + i, (SUPERSAMPLE_FACTOR * y) + j);
-                        total_red+=pixel[0] as u32;
-                        total_green+=pixel[1] as u32;
-                        total_blue+=pixel[2] as u32;
+        let colors = self.generate_colors(map);
+        
+        let shared_field = Arc::new(map.field.to_owned());
+        let shared_renderer = Arc::new(self.to_owned());
+        let shared_wrappings = Arc::new(wrappings);
+        let shared_colors = Arc::new(colors);
+
+        let offsets = [(0.25, 0.25), (0.75, 0.25), (0.75, 0.75), (0.25, 0.75)];
+        let images = thread::scope(|s| {
+            let mut images = Vec::with_capacity(4);
+            for i in 0..4 {
+                let shared_field = Arc::clone(&shared_field);
+                let shared_renderer = Arc::clone(&shared_renderer);
+                let shared_wrappings = Arc::clone(&shared_wrappings);
+                let shared_colors = Arc::clone(&shared_colors);
+                let mut image = Image::new(width, height, ColorMode::Rgb);
+                images.push(s.spawn(move |_| {
+                    for (index, hex) in shared_field.iter().enumerate() {
+                        // check bottom row
+                        if hex.y as u32 == map.size_y - 1 {
+                            shared_renderer.render_hex(&mut image, hex, map.size_x, shared_wrappings[index], true, offsets[i], shared_colors[index]);
+                        } else {
+                            shared_renderer.render_hex(&mut image, hex, map.size_x, shared_wrappings[index], false, offsets[i], shared_colors[index]);
+                        }
+                    }
+                    image
+                }));
+            }
+            images.into_iter().map(|handle| handle.join().unwrap()).collect::<Vec<Image>>()
+        }).unwrap();
+
+        Self::reconstruct_image(images)
+    }
+
+    fn reconstruct_image(mut images: Vec<Image>) -> Image {
+        // extract image prom Vec
+        let mut base_image = images.remove(0);
+        thread::scope(|s| {
+            // moove rest of the images from Vec into seperate shared pointers
+            let shared_image_0 = Arc::new(images.remove(0));
+            let shared_image_1 = Arc::new(images.remove(0));
+            let shared_image_2 = Arc::new(images.remove(0));
+            // determine size of chunk
+            let chunk_size = base_image.buffer().len() / num_cpus::get();
+            let mut threads = Vec::new();
+            for (chunk_num, slice) in base_image.buffer.chunks_mut(chunk_size).enumerate() {
+                let shared_image_0 = Arc::clone(&shared_image_0);
+                let shared_image_1 = Arc::clone(&shared_image_1);
+                let shared_image_2 = Arc::clone(&shared_image_2);
+                threads.push(s.spawn(move |_| {
+                    // create slices of image data of the same size
+                    let image_0_slice = shared_image_0.buffer.chunks(chunk_size).collect::<Vec<&[u8]>>()[chunk_num];
+                    let image_1_slice = shared_image_1.buffer.chunks(chunk_size).collect::<Vec<&[u8]>>()[chunk_num];
+                    let image_2_slice = shared_image_2.buffer.chunks(chunk_size).collect::<Vec<&[u8]>>()[chunk_num];
+                    for (i, value) in slice.iter_mut().enumerate() {
+                        *value = ((*value as u32 + image_0_slice[i] as u32 + image_1_slice[i] as u32 + image_2_slice[i] as u32) / 4) as u8;
+                    }
+                }));
+            }
+        }).unwrap();
+        base_image
+    }
+
+    fn generate_colors(&self, map: &HexMap) -> Vec<[u8;3]> {
+        let mut rng = thread_rng();
+        // randomize color a little bit
+
+        let clamp_color = |value: f32| {
+            (value).max(0.0).min(255.0) as u8
+        };
+
+        let mut colors = Vec::with_capacity(map.get_area() as usize);
+
+        for hex in &map.field {
+            let color_diff = rng.gen_range(0.98, 1.02);
+
+            let mut color = match hex.terrain_type {
+                HexType::Debug(val) => {
+                    let value = clamp_color(val * 255.0);
+                    [value, value, value]
+                },
+                HexType::Debug2d((r,g)) => {
+                    [clamp_color(r * 255.0), clamp_color(g * 255.0), 0]
+                },
+                _ => {
+                    let color = self.colors.get_color_u8(&hex.terrain_type);
+                    [color.0, color.1, color.2]
+                }
+            };
+
+            // dont't randomize color of debug hexes
+            if self.randomize_colors {
+                match hex.terrain_type {
+                    HexType::Debug(_) | HexType::Debug2d(_) => {},
+                    _ => {
+                        for i in 0..3 {
+                            color[i] = clamp_color(f32::from(color[i]) * color_diff);
+                        }
                     }
                 }
-                let avg_red: u32 = total_red / (SUPERSAMPLE_FACTOR * SUPERSAMPLE_FACTOR);
-                let avg_green: u32 = total_green / (SUPERSAMPLE_FACTOR * SUPERSAMPLE_FACTOR);
-                let avg_blue: u32 = total_blue / (SUPERSAMPLE_FACTOR * SUPERSAMPLE_FACTOR);
-                image_final.put_pixel(x as u32, y as u32, [avg_red as u8, avg_green as u8, avg_blue as u8]);
             }
+            colors.push(color);
         }
 
-        image_final
+        colors
     }
 
     pub fn set_random_colors(&mut self, value: bool) {
@@ -469,6 +498,8 @@ impl Renderer for Basic {
         let height = (map.absolute_size_y * self.multiplier) as u32;
         let mut image = Image::new(width, height, ColorMode::Rgb);
 
+        let colors = self.generate_colors(map);
+
         for (index, hex) in map.field.iter().enumerate() {
             let wrapping = if self.wrap_map && index as u32 % map.size_x == 0 {
                 RenderWrapped::Right
@@ -479,9 +510,9 @@ impl Renderer for Basic {
             };
             // check bottom row
             if hex.y as u32 == map.size_y - 1 {
-                self.render_hex(&mut image, hex, map.size_x, wrapping, true);
+                self.render_hex(&mut image, hex, map.size_x, wrapping, true, (0.5, 0.5), colors[index]);
             } else {
-                self.render_hex(&mut image, hex, map.size_x, wrapping, false);
+                self.render_hex(&mut image, hex, map.size_x, wrapping, false, (0.5, 0.5), colors[index]);
             }
         }
         image
@@ -501,6 +532,7 @@ impl Renderer for Basic {
     }
 }
 
+#[derive(Clone, Copy, Debug)]
 enum RenderWrapped {
     Left,
     Right,

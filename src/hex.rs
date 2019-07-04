@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use crate::hexmap::HexMap;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 /// Data structure for single map tile
 pub struct Hex {
     pub x: i32,
