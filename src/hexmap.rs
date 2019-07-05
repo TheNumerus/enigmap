@@ -122,9 +122,8 @@ impl HexMap {
     /// Sets hex value
     pub fn set_hex(&mut self, x: i32, y: i32, hex: Hex) {
         let index = self.coords_to_index(x, y);
-        match index {
-            Some(idx) => self.field[idx] = hex,
-            _ => {}
+        if let Some(idx) = index {
+            self.field[idx] = hex
         }
     }
 

@@ -62,7 +62,7 @@ impl Circle {
 
         for (line_num, line) in old_field.iter().enumerate() {
             if !line.is_empty() {
-                if let None = min_land_y {
+                if min_land_y.is_none() {
                     min_land_y = Some(line_num as i32);
                 }
                 max_land_y = line_num as i32;
@@ -137,7 +137,7 @@ impl Circle {
         for hex in &hex_map.field {
             match hex.terrain_type {
                 HexType::Field => {
-                    copy_field.push((hex.clone(), 1));
+                    copy_field.push((*hex, 1));
                     total_value+=1;
                 },
                 _ => continue

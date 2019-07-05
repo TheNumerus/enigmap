@@ -205,13 +205,13 @@ impl Sprite {
                 return None;
             }
             self.textures_cover.get_mut(&key).unwrap().remove(index);
-            return Some(index);
+            Some(index)
         } else {
             if self.variations[&key] == 1 || index as u32 > self.variations[&key] {
                 return None;
             }
             self.textures.get_mut(&key).unwrap().remove(index);
-            return Some(index);
+            Some(index)
         }
     }
 
@@ -637,7 +637,7 @@ impl Renderer for Sprite {
 
                 // render hexes
                 for key in instances.keys() {
-                    let substrings: Vec<&str> = key.split("_").collect();
+                    let substrings: Vec<&str> = key.split('_').collect();
                     let index = if substrings.len() > 1 {
                         substrings[1].parse::<usize>().unwrap()
                     } else {
@@ -652,7 +652,7 @@ impl Renderer for Sprite {
                 }
                 // render 2.5d hexes
                 for key in instances_cover.keys() {
-                    let substrings: Vec<&str> = key.split("_").collect();
+                    let substrings: Vec<&str> = key.split('_').collect();
                     let index = if substrings.len() > 1 {
                         substrings[1].parse::<usize>().unwrap()
                     } else {

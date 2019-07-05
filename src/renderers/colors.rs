@@ -57,3 +57,9 @@ impl ColorMap {
         self.map.insert(ht, Color::from_tupple(color));
     }
 }
+
+impl Default for ColorMap {
+    fn default() -> ColorMap {
+        ColorMap::new()
+    }
+}

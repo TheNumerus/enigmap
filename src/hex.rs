@@ -132,7 +132,7 @@ impl Hex {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Copy)]
+#[derive(Debug, Clone, Copy)]
 /// Type of terrain / feature on specific 'Hex'
 pub enum HexType {
     Field,
@@ -163,6 +163,12 @@ impl Distribution<HexType> for Standard {
             8 => HexType::Ice,
             _ => HexType::Jungle
         }
+    }
+}
+
+impl PartialEq for HexType {
+    fn eq(&self, other: &Self) -> bool {
+        i32::from(*self) == i32::from(*other)
     }
 }
 
@@ -226,8 +232,8 @@ impl From<HexType> for String {
             HexType::Impassable => String::from("Impassable"),
             HexType::Ice => String::from("Ice"),
             HexType::Jungle => String::from("Jungle"),
-            HexType::Debug(val) => String::from(format!("Debug: {}", val)),
-            HexType::Debug2d((x,y)) => String::from(format!("Debug2d: {}, {}", x, y))
+            HexType::Debug(val) => format!("Debug: {}", val),
+            HexType::Debug2d((x,y)) => format!("Debug2d: {}, {}", x, y)
         }
     }
 }

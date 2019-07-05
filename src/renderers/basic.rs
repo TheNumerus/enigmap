@@ -132,16 +132,7 @@ impl Basic {
             edges[i] = ((min_x as f32 + pixel_offset.0 - points[point_indices[i]].0) * deltas[i].1) - ((min_y as f32 + pixel_offset.1 - points[point_indices[i]].1) * deltas[i].0);
         }
 
-        let check_inside = |edges: &mut[f32]| {
-            for edge in edges {
-                if *edge < 0.0 {
-                    return false;
-                }
-            }
-            true
-        };
-
-        let mut line_state = LineState::BeforeHex;
+        let mut line_state = LineState::Before;
 
         let mut middle_start = max_y;
         let mut middle_start_reversed = false;
@@ -152,7 +143,7 @@ impl Basic {
 
             if is_reversed {
                 for (x_index, x) in (min_x..=max_x).rev().enumerate() {
-                    let in_hex = check_inside(&mut edges);
+                    let in_hex = Self::check_inside(&mut edges);
                     line_state.update(in_hex);
                     
                     if in_hex {
@@ -167,15 +158,12 @@ impl Basic {
                         img.put_pixel(x as u32, y as u32, color);
                     } else {
                         // skip to the end of the line
-                        match line_state {
-                            LineState::AfterHex => {
-                                // add all deltas at once
-                                for (index, edge) in edges.iter_mut().enumerate() {
-                                    *edge -= (max_x - min_x - x_index as i32) as f32 * deltas[index].1;
-                                }
-                                break
-                            },
-                            _ => {}
+                        if let LineState::After = line_state {
+                            // add all deltas at once
+                            for (index, edge) in edges.iter_mut().enumerate() {
+                                *edge -= (max_x - min_x - x_index as i32) as f32 * deltas[index].1;
+                            }
+                            break
                         }
                     }
 
@@ -188,7 +176,7 @@ impl Basic {
                 }
             } else {
                 for (x_index, x) in (min_x..=max_x).enumerate() {
-                    let in_hex = check_inside(&mut edges);
+                    let in_hex = Self::check_inside(&mut edges);
                     line_state.update(in_hex);
                     
                     if in_hex {
@@ -202,15 +190,12 @@ impl Basic {
                         img.put_pixel(x as u32, y as u32, color);
                     } else {
                         // skip to the end of the line
-                        match line_state {
-                            LineState::AfterHex => {
-                                // add all deltas at once
-                                for (index, edge) in edges.iter_mut().enumerate() {
-                                    *edge += (max_x - min_x - x_index as i32) as f32 * deltas[index].1;
-                                }
-                                break
-                            },
-                            _ => {}
+                        if let LineState::After = line_state {
+                            // add all deltas at once
+                            for (index, edge) in edges.iter_mut().enumerate() {
+                                *edge += (max_x - min_x - x_index as i32) as f32 * deltas[index].1;
+                            }
+                            break
                         }
                     }
 
@@ -239,7 +224,7 @@ impl Basic {
 
         // render middle
         for y in (middle_start)..=(max_y) {
-            let in_hex = check_inside(&mut edges);
+            let in_hex = Self::check_inside(&mut edges);
             if !in_hex && is_bottom_row {
                 top_start = y;
                 break;
@@ -264,19 +249,16 @@ impl Basic {
 
             if is_reversed {
                 for (x_index, x) in (left_border..=right_border).rev().enumerate() {
-                    let in_hex = check_inside(&mut edges);
+                    let in_hex = Self::check_inside(&mut edges);
                     line_state.update(in_hex);
                     
                     if in_hex {
                         img.put_pixel(x as u32, y as u32, color);
                     } else {
                         // skip to the next line
-                        match line_state {
-                            LineState::AfterHex => {
-                                left_border = x;
-                                break
-                            },
-                            _ => {}
+                        if let LineState::After = line_state {
+                            left_border = x;
+                            break
                         }
                     }
 
@@ -289,19 +271,16 @@ impl Basic {
                 }
             } else {
                 for (x_index, x) in (left_border..=right_border).enumerate() {
-                    let in_hex = check_inside(&mut edges);
+                    let in_hex = Self::check_inside(&mut edges);
                     line_state.update(in_hex);
                     
                     if in_hex {
                         img.put_pixel(x as u32, y as u32, color);
                     } else {
                         // skip to the next line
-                        match line_state {
-                            LineState::AfterHex => {
-                                right_border = x;
-                                break
-                            },
-                            _ => {}
+                        if let LineState::After = line_state {
+                            right_border = x;
+                            break
                         }
                     }
 
@@ -322,7 +301,16 @@ impl Basic {
         }
     }
 
-    fn render_hex(&self, image: &mut Image, hex: &Hex, width: u32, render_wrapped: RenderWrapped, is_bottom_row: bool, pixel_offset: (f32, f32), color: [u8;3]) {
+    fn check_inside(edges: &mut[f32]) -> bool {
+        for edge in edges {
+            if *edge < 0.0 {
+                return false;
+            }
+        }
+        true
+    }
+
+    fn render_hex(&self, image: &mut Image, hex: &Hex, settings: &HexRenderSettings) {
         // get hex vertices positions
         // points need to be in counter clockwise order
         let mut points = [(0.0, 0.0);6];
@@ -331,23 +319,23 @@ impl Basic {
             points[5 - index] = (coords.0 * self.multiplier, coords.1 * self.multiplier);
         };
 
-        self.render_hex_to_image(&points, image, color, is_bottom_row, pixel_offset);
+        self.render_hex_to_image(&points, image, settings.color, settings.is_bottom_row, settings.pixel_offset);
 
-        match render_wrapped {
+        match settings.wrapping {
             RenderWrapped::None => {},
             RenderWrapped::Left => {
                 // subtract offset
                 for index in 0..6 {
-                    points[index].0 -= width as f32 * self.multiplier;
+                    points[index].0 -= settings.wrap_offset * self.multiplier;
                 };
-                self.render_hex_to_image(&points, image, color, is_bottom_row, pixel_offset);
+                self.render_hex_to_image(&points, image, settings.color, settings.is_bottom_row, settings.pixel_offset);
             },
             RenderWrapped::Right => {
                 // add offset
                 for index in 0..6 {
-                    points[index].0 += width as f32 * self.multiplier;
+                    points[index].0 += settings.wrap_offset * self.multiplier;
                 };
-                self.render_hex_to_image(&points, image, color, is_bottom_row, pixel_offset);
+                self.render_hex_to_image(&points, image, settings.color, settings.is_bottom_row, settings.pixel_offset);
             }
         };
     }
@@ -358,11 +346,11 @@ impl Basic {
 
         let mut wrappings = vec![RenderWrapped::None; map.get_area() as usize];
 
-        for index in 0..map.get_area() as usize {
+        for (index, wrapping) in wrappings.iter_mut().enumerate() {
             if self.wrap_map && index as u32 % map.size_x == 0 {
-                wrappings[index] = RenderWrapped::Right;
+                *wrapping = RenderWrapped::Right;
             } else if self.wrap_map && index as u32 % map.size_x == (map.size_x - 1) {
-                wrappings[index] = RenderWrapped::Left;
+                *wrapping = RenderWrapped::Left;
             }
         }
 
@@ -383,13 +371,21 @@ impl Basic {
                 let shared_colors = Arc::clone(&shared_colors);
                 let mut image = Image::new(width, height, ColorMode::Rgb);
                 images.push(s.spawn(move |_| {
+                    let mut settings = HexRenderSettings{
+                        wrapping: shared_wrappings[0],
+                        wrap_offset: map.size_x as f32,
+                        color: shared_colors[0],
+                        is_bottom_row: false,
+                        pixel_offset: offsets[i]
+                    };
                     for (index, hex) in shared_field.iter().enumerate() {
+                        settings.color = shared_colors[index];
+                        settings.wrapping = shared_wrappings[index];
                         // check bottom row
                         if hex.y as u32 == map.size_y - 1 {
-                            shared_renderer.render_hex(&mut image, hex, map.size_x, shared_wrappings[index], true, offsets[i], shared_colors[index]);
-                        } else {
-                            shared_renderer.render_hex(&mut image, hex, map.size_x, shared_wrappings[index], false, offsets[i], shared_colors[index]);
+                            settings.is_bottom_row = true;
                         }
+                        shared_renderer.render_hex(&mut image, hex, &settings);
                     }
                     image
                 }));
@@ -461,8 +457,8 @@ impl Basic {
                 match hex.terrain_type {
                     HexType::Debug(_) | HexType::Debug2d(_) => {},
                     _ => {
-                        for i in 0..3 {
-                            color[i] = clamp_color(f32::from(color[i]) * color_diff);
+                        for color_channel in &mut color {
+                            *color_channel = clamp_color(f32::from(*color_channel) * color_diff);
                         }
                     }
                 }
@@ -500,8 +496,16 @@ impl Renderer for Basic {
 
         let colors = self.generate_colors(map);
 
+        let mut settings = HexRenderSettings{
+            wrapping: RenderWrapped::None,
+            wrap_offset: map.size_x as f32,
+            color: colors[0],
+            is_bottom_row: false,
+            pixel_offset: (0.5, 0.5)
+        };
+
         for (index, hex) in map.field.iter().enumerate() {
-            let wrapping = if self.wrap_map && index as u32 % map.size_x == 0 {
+            settings.wrapping = if self.wrap_map && index as u32 % map.size_x == 0 {
                 RenderWrapped::Right
             } else if self.wrap_map && index as u32 % map.size_x == (map.size_x - 1) {
                 RenderWrapped::Left
@@ -510,10 +514,9 @@ impl Renderer for Basic {
             };
             // check bottom row
             if hex.y as u32 == map.size_y - 1 {
-                self.render_hex(&mut image, hex, map.size_x, wrapping, true, (0.5, 0.5), colors[index]);
-            } else {
-                self.render_hex(&mut image, hex, map.size_x, wrapping, false, (0.5, 0.5), colors[index]);
+                settings.is_bottom_row = true;
             }
+            self.render_hex(&mut image, hex, &settings);
         }
         image
     }
@@ -540,21 +543,30 @@ enum RenderWrapped {
 }
 
 enum LineState {
-    BeforeHex,
-    InHex,
-    AfterHex
+    Before,
+    In,
+    After
 }
 
 impl LineState {
     pub fn reset(&mut self) {
-        *self = LineState::BeforeHex;
+        *self = LineState::Before;
     }
 
     pub fn update(&mut self, in_hex: bool) {
         *self = match self {
-            LineState::BeforeHex if in_hex => LineState::InHex,
-            LineState::InHex if !in_hex => LineState::AfterHex,
+            LineState::Before if in_hex => LineState::In,
+            LineState::In if !in_hex => LineState::After,
             _ => return
         };
     } 
+}
+
+#[derive(Clone, Copy, Debug)]
+struct HexRenderSettings {
+    wrapping: RenderWrapped,
+    wrap_offset: f32,
+    is_bottom_row: bool,
+    pixel_offset: (f32, f32),
+    color: [u8;3]
 }
