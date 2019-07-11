@@ -66,9 +66,15 @@ impl Vector {
 
     fn get_points(&self, hex: &Hex) -> String {
         let mut points = String::new();
+        let odd_row = hex.y % 2 == 0;
+        // points 2 and 5 are on top and bottom and so they have 0.5 units offset
         for i in 0..6 {
             let point_f32 = self.get_hex_vertex(hex, i);
-            points += format!("{}, {} ", point_f32.0, point_f32.1).as_str();
+            if odd_row ^ (i == 5 || i == 2) {
+                points += format!("{:.0}, {:.3} ", point_f32.0, point_f32.1).as_str();
+            } else {
+                points += format!("{:.1}, {:.3} ", point_f32.0, point_f32.1).as_str();
+            }
         }
         points
     }
@@ -86,7 +92,7 @@ impl Vector {
                 Wrapping::Right => point_f32.0 += offset,
                 Wrapping::Left => point_f32.0 -= offset
             }
-            points += format!("{}, {} ", point_f32.0, point_f32.1).as_str();
+            points += format!("{:.1}, {:.3} ", point_f32.0, point_f32.1).as_str();
         }
         points
     }
@@ -103,13 +109,15 @@ impl Renderer for Vector {
 
     fn render(&self, map: &HexMap) -> Document {
         let colors = self.generate_colors(map);
-        let mut doc = Document::new().set("width", map.absolute_size_x).set("height", map.absolute_size_y);
+        let mut doc = Document::new()
+            .set("width", map.absolute_size_x)
+            .set("height", map.absolute_size_y);
 
         for (index, hex) in map.field.iter().enumerate() {
             let mut polygon = Polygon::new();
 
             let color = colors[index];
-            let color = format!("rgb({},{},{})", color[0], color[1], color[2]);
+            let color = format!("#{:02X}{:02X}{:02X}", color[0], color[1], color[2]);
             polygon = polygon.set("fill", color);
 
             let points = self.get_points(hex);
@@ -132,7 +140,7 @@ impl Renderer for Vector {
                 let mut polygon = Polygon::new();
 
                 let color = colors[index];
-                let color = format!("rgb({},{},{})", color[0], color[1], color[2]);
+                let color = format!("#{:02X}{:02X}{:02X}", color[0], color[1], color[2]);
                 polygon = polygon.set("fill", color);
 
                 let points = self.get_wrapped_points(hex, wrapping, map.size_x as f32);
