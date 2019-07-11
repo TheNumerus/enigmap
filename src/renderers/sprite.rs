@@ -423,6 +423,8 @@ impl Sprite {
 }
 
 impl Renderer for Sprite {
+    type Output = Image;
+
     fn render(&self, map: &HexMap) -> Image {
         let w = self.tile_size as f64;
         let h = w;

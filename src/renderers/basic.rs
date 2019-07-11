@@ -485,6 +485,8 @@ impl Default for Basic {
 }
 
 impl Renderer for Basic {
+    type Output = Image;
+
     fn render(&self, map: &HexMap) -> Image {
         if self.antialiasing {
             return self.render_aa_image(map);

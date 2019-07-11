@@ -4,21 +4,25 @@ use crate::hex::{Hex, RATIO};
 mod basic;
 mod ogl;
 mod sprite;
+mod vector;
 pub mod colors;
 
 pub use self::basic::Basic;
 pub use self::ogl::OGL;
 pub use self::sprite::*;
+pub use self::vector::Vector;
 
 const HALF_RATIO: f32 = RATIO / 2.0;
 const QUARTER_RATIO: f32 = RATIO / 4.0;
 
 /// Trait for `HexMap` renderers
 pub trait Renderer {
+    type Output;
+
     /// Main function used when rendering `HexMap`
     /// 
     /// Returns `Vec<u8> with image data`
-    fn render(&self, map: &HexMap) -> Image;
+    fn render(&self, map: &HexMap) -> Self::Output;
 
     /// Set scale of rendered hexagons
     fn set_scale(&mut self, scale: f32);

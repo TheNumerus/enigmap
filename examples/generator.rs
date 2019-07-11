@@ -1,6 +1,6 @@
 use enigmap::{
     prelude::*,
-    renderers::{Basic, OGL, Sprite},
+    renderers::{Basic, OGL, Sprite, Vector, Image},
     generators::{Circle, Islands, Geo, Debug},
     HexType
 };
@@ -41,8 +41,8 @@ fn main() {
     }
 
     // select renderer
-    let ren_choice = get_u32("renderer choice (0 - basic, 1 - OGL, 2..inf - sprite)", 0);
-    let mut renderer: Box<dyn Renderer> = match ren_choice {
+    let ren_choice = get_u32("renderer choice (0 - basic, 1 - OGL, 2 - sprite, 3..inf - vector)", 0);
+    let mut renderer: Box<dyn Renderer<Output=Image>> = match ren_choice {
         0 => {
             let mut ren = Basic::default();
             // change color of water tiles
@@ -55,13 +55,16 @@ fn main() {
             ren.colors.set_color_f32(HexType::Ocean, (0.1, 0.3, 0.5));
             Box::new(ren)
         },
-        2 | _ => {
+        2 => {
             let mut ren = Sprite::from_folder("./examples/textures");
             // 2x2 RGBA grey checkerboard pattern 
             let texture_data = [40, 40, 40, 255, 80, 80, 80, 255, 80, 80, 80, 255, 40, 40, 40, 255];
             // set mountain texture to provided data
             ren.set_texture(&texture_data, 2, 2, HexType::Mountain, false);
             Box::new(ren)
+        },
+        3 | _ => {
+            return render_vector(hexmap, gen);
         }
     };
     renderer.set_scale(20.0);
@@ -130,4 +133,34 @@ fn bencher<T>(mut test: T, name: &str, iter: u32)
         test();
         println!("{} took {}.{:03} seconds", name, time.elapsed().as_secs(), time.elapsed().subsec_millis());
     }
+}
+
+fn render_vector(mut hexmap: HexMap, gen: Box<dyn MapGen>) {
+    let renderer = Vector::default();
+
+    // generate map field
+    bencher(| | {
+        gen.generate(&mut hexmap);
+    }, "Generation", 1);
+    
+    let mut document = None;
+
+    // render image
+    bencher(| | {
+        document = Some(renderer.render(&hexmap));
+    }, "Rendering", 1);
+
+    // create folder for image if needed
+    let path = "./out";
+    if !Path::new(path).exists() {
+        fs::create_dir("./out").unwrap();
+    }
+
+    let document = document.unwrap();
+
+    // save file
+    bencher(| | {
+        let path = Path::new("./out/map.svg");
+        svg::save(path, &document).unwrap();
+    }, "Saving", 1);
 }
