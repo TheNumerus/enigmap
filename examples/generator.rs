@@ -13,6 +13,7 @@ use std::{
 };
 
 use png::HasParameters;
+use ansi_term::Colour;
 
 fn main() {
     let sizes = get_size();
@@ -30,14 +31,14 @@ fn main() {
     };
 
     // get seed
-    println!("Please input seed: ");
+    println!("Please input {}: ", Colour::Fixed(14).paint("seed"));
     let mut seed = String::new();
 
     io::stdin().read_line(&mut seed).expect("Failed to read line");
 
     match seed.trim().parse() {
         Ok(some) => gen.set_seed(some),
-        Err(_) => println!("Not a number, using random seed"),
+        Err(_) => println!("{}", Colour::Fixed(9).paint("Not a number, using random seed")),
     }
 
     // select renderer
@@ -107,7 +108,7 @@ fn main() {
 }
 
 fn get_u32(name: &str, default: u32) -> u32 {
-    println!("Please input {}: ", name);
+    println!("Please input {}: ", Colour::Fixed(14).paint(name));
     let mut size_x = String::new();
 
     io::stdin().read_line(&mut size_x).expect("Failed to read line");
@@ -115,7 +116,7 @@ fn get_u32(name: &str, default: u32) -> u32 {
     match size_x.trim().parse() {
         Ok(some) => some,
         Err(_) => {
-            println!("Not a number, set default value of {}", default);
+            println!("{}", Colour::Fixed(9).paint(format!("Not a number, set default value of {}", default)));
             default
         },
     }
@@ -131,7 +132,10 @@ fn bencher<T>(mut test: T, name: &str, iter: u32)
     for _i in 0..iter {
         let time = Instant::now();
         test();
-        println!("{} took {}.{:03} seconds", name, time.elapsed().as_secs(), time.elapsed().subsec_millis());
+        let secs = time.elapsed().as_secs();
+        let milis = time.elapsed().subsec_millis();
+        let time = Colour::Fixed(14).paint(format!("{}.{:03}", secs, milis));
+        println!("{} took {} seconds", name, time);
     }
 }
 
