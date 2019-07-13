@@ -22,12 +22,11 @@ fn main() {
     let mut hexmap = HexMap::new(sizes.0, sizes.1);
 
     // select generator
-    let gen_choice = get_u32("generator choice (0 - circle, 1 - islands, 2 - geo, 3..inf - debug)", 0);
+    let gen_choice = get_u32("generator choice (0 - circle, 1 - islands, 2..inf - debug)", 0);
     let mut gen: Box<dyn MapGen> = match gen_choice {
         0 => Box::new(Circle::new_optimized(&hexmap)),
         1 => Box::new(Islands::default()),
-        2 => Box::new(Geo::default()),
-        3 | _ => Box::new(Debug::default()),
+        2 | _ => Box::new(Debug::default()),
     };
 
     // get seed
