@@ -24,7 +24,12 @@ pub struct HexMap {
 
 impl HexMap {
     /// Creates new `Hexmap` based on dimensions with all `Hex` tiles populated and with correct coordinates
+    /// Panics when `Option::None` if x or y is 0
     pub fn new(size_x: u32, size_y: u32) -> HexMap {
+        if size_x == 0 || size_y == 0 {
+            panic!("One of map dimensions is 0");
+        }
+
         let field: Vec<Hex> = Vec::with_capacity((size_x * size_y) as usize);
         let absolute_size_x = size_x as f32 + 0.5;
         let absolute_size_y = RATIO + (size_y - 1) as f32 * RATIO * 0.75;

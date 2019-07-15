@@ -1,7 +1,7 @@
 use enigmap::{
     prelude::*,
     renderers::{Basic, OGL, Sprite, Vector, Image},
-    generators::{Circle, Islands, Geo, Debug},
+    generators::{Circle, Islands, Inland, Debug},
     HexType
 };
 
@@ -22,11 +22,12 @@ fn main() {
     let mut hexmap = HexMap::new(sizes.0, sizes.1);
 
     // select generator
-    let gen_choice = get_u32("generator choice (0 - circle, 1 - islands, 2..inf - debug)", 0);
+    let gen_choice = get_u32("generator choice (0 - circle, 1 - islands, 2 - inland, 3..inf - debug)", 0);
     let mut gen: Box<dyn MapGen> = match gen_choice {
         0 => Box::new(Circle::new_optimized(&hexmap)),
         1 => Box::new(Islands::default()),
-        2 | _ => Box::new(Debug::default()),
+        2 => Box::new(Inland::default()),
+        3 | _ => Box::new(Debug::default()),
     };
 
     // get seed
@@ -122,7 +123,17 @@ fn get_u32(name: &str, default: u32) -> u32 {
 }
 
 fn get_size() -> (u32, u32) {
-    (get_u32("size X", 100), get_u32("size Y", 75))
+    let mut x = get_u32("size X", 100);
+    if x == 0 {
+        println!("{}", Colour::Fixed(9).paint(format!("Map dimension cannot be zero, set default value of 100")));
+        x = 100;
+    }
+    let mut y = get_u32("size Y", 75);
+    if y == 0 {
+        println!("{}", Colour::Fixed(9).paint(format!("Map dimension cannot be zero, set default value of 75")));
+        y = 75;
+    }
+    (x, y)
 }
 
 fn bencher<T>(mut test: T, name: &str, iter: u32)

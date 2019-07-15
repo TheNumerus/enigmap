@@ -12,6 +12,7 @@ pub struct Hex {
     pub x: i32,
     pub y: i32,
     pub terrain_type: HexType,
+    pub decor: Decor,
     pub center_x: f32,
     pub center_y: f32
 }
@@ -20,11 +21,6 @@ pub struct Hex {
 pub const RATIO: f32 = 1.154_700_538_38;
 
 impl Hex {
-    /// Creates new empty 'Hex' with default values
-    pub fn new() -> Hex {
-        Hex{..Default::default()}
-    }
-
     /// Creates new `Hex` from specific coordinates with default `terrain_type`
     pub fn from_coords(x: i32, y: i32) -> Hex {
         let center_x = (x as f32) + (y/2) as f32 + match y % 2 {
@@ -32,7 +28,7 @@ impl Hex {
             1 | _ => 1.0,
         };
         let center_y =  (y as f32 * RATIO * 3.0 / 4.0) + RATIO / 2.0;
-        Hex{x, y, terrain_type: HexType::Water, center_x, center_y}    
+        Hex{x, y, terrain_type: HexType::Water, center_x, center_y, ..Default::default()}    
     }
 
     /// Returns dstance to other `Hex`
@@ -65,7 +61,7 @@ impl Hex {
         neighbours
     }
 
-        /// Returns vector of `Hex` tiles next to specified `Hex` without checking if contained in hexmap
+    /// Returns vector of `Hex` tiles next to specified `Hex` without checking if contained in hexmap
     pub fn get_neighbours_unchecked(&self, hexmap: &HexMap) -> [(i32, i32); 6] {
         let mut neighbours = [(0, 0); 6];
         // bottom right
@@ -128,7 +124,7 @@ impl Hex {
 
  impl Default for Hex {
     fn default() -> Self {
-        Hex{x:0, y: 0, terrain_type: HexType::Water, center_x: 0.5, center_y: RATIO / 2.0}
+        Hex{x:0, y: 0, terrain_type: HexType::Water, center_x: 0.5, center_y: RATIO / 2.0, decor: Decor::None}
     }
 }
 
@@ -256,6 +252,23 @@ impl HexType {
 
     pub fn get_num_variants() -> usize {
         12
+    }
+}
+
+
+#[derive(Debug, Copy, Clone)]
+pub enum Decor {
+    None,
+    River,
+    Village,
+    City,
+    Road,
+    Ruin
+}
+
+impl Default for Decor {
+    fn default() -> Decor {
+        Decor::None
     }
 }
 
