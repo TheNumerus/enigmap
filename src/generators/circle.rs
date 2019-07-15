@@ -146,6 +146,10 @@ impl Circle {
 
         let mountains_to_spawn = (total_value as f32 * self.mountain_percentage) as u32;
 
+        if mountains_to_spawn == 0 {
+            return;
+        }
+
         for _number in 0..=mountains_to_spawn {
             let random_number = rng.gen_range(0, total_value);
             let mut base = 0;
