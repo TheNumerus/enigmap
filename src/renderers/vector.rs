@@ -38,7 +38,7 @@ impl Vector {
                     let value = clamp_color(val * 255.0);
                     [value, value, value]
                 },
-                HexType::Debug2d((r,g)) => {
+                HexType::Debug2d(r,g) => {
                     [clamp_color(r * 255.0), clamp_color(g * 255.0), 0]
                 },
                 _ => {
@@ -50,7 +50,7 @@ impl Vector {
             // dont't randomize color of debug hexes
             if self.randomize_colors {
                 match hex.terrain_type {
-                    HexType::Debug(_) | HexType::Debug2d(_) => {},
+                    HexType::Debug(_) | HexType::Debug2d(_, _) => {},
                     _ => {
                         for color_channel in &mut color {
                             *color_channel = clamp_color(f32::from(*color_channel) * color_diff);

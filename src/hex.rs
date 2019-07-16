@@ -141,24 +141,15 @@ pub enum HexType {
     Impassable,
     Ice,
     Jungle,
+    Swamp,
+    Grassland,
     Debug(f32),
-    Debug2d((f32,f32)),
+    Debug2d(f32,f32),
 }
 
 impl Distribution<HexType> for Standard {
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> HexType {
-        match rng.gen_range(0, 9) {
-            0 => HexType::Field,
-            1 => HexType::Forest,
-            2 => HexType::Desert,
-            3 => HexType::Tundra,
-            4 => HexType::Water,
-            5 => HexType::Ocean,
-            6 => HexType::Mountain,
-            7 => HexType::Impassable,
-            8 => HexType::Ice,
-            _ => HexType::Jungle
-        }
+        HexType::from(rng.gen_range(0, 11))
     }
 }
 
@@ -189,8 +180,10 @@ impl From<HexType> for i32 {
             HexType::Impassable => 7,
             HexType::Ice => 8,
             HexType::Jungle => 9,
-            HexType::Debug(_) => 10,
-            HexType::Debug2d(_) => 11
+            HexType::Swamp => 10,
+            HexType::Grassland => 11,
+            HexType::Debug(_) => 12,
+            HexType::Debug2d(_, _) => 13
         }
     }
 }
@@ -208,8 +201,10 @@ impl From<i32> for HexType {
             7 => HexType::Impassable,
             8 => HexType::Ice,
             9 => HexType::Jungle,
-            10 => HexType::Debug(0.5),
-            11 => HexType::Debug2d((0.5,0.5)),
+            10 => HexType::Swamp,
+            11 => HexType::Grassland,
+            12 => HexType::Debug(0.5),
+            13 => HexType::Debug2d(0.5,0.5),
             _ => panic!("Hextype index out of range")
         }
     }
@@ -228,8 +223,10 @@ impl From<HexType> for String {
             HexType::Impassable => String::from("Impassable"),
             HexType::Ice => String::from("Ice"),
             HexType::Jungle => String::from("Jungle"),
+            HexType::Swamp => String::from("Swamp"),
+            HexType::Grassland => String::from("Grassland"),
             HexType::Debug(val) => format!("Debug: {}", val),
-            HexType::Debug2d((x,y)) => format!("Debug2d: {}, {}", x, y)
+            HexType::Debug2d(x,y) => format!("Debug2d: {}, {}", x, y)
         }
     }
 }
@@ -247,11 +244,13 @@ impl HexType {
         map.insert(String::from("Impassable"), HexType::Impassable);
         map.insert(String::from("Ice"), HexType::Ice);
         map.insert(String::from("Jungle"), HexType::Jungle);
+        map.insert(String::from("Swamp"), HexType::Swamp);
+        map.insert(String::from("Grassland"), HexType::Grassland);
         map
     }
 
     pub fn get_num_variants() -> usize {
-        12
+        14
     }
 }
 
@@ -263,7 +262,8 @@ pub enum Decor {
     Village,
     City,
     Road,
-    Ruin
+    Ruin,
+    Hill
 }
 
 impl Default for Decor {

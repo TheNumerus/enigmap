@@ -5,8 +5,9 @@ use crate::hex::HexType;
 pub struct Inland {
     seed: Option<u32>,
     wrap_map: bool,
-    temperature: Temp,
-    flatness: Flatness
+    temperature: InlandParam,
+    flatness: InlandParam,
+    humidity: InlandParam
 }
 
 impl Inland {
@@ -14,12 +15,16 @@ impl Inland {
         self.wrap_map = value;
     }
 
-    pub fn set_temperature(&mut self, temp: Temp) {
+    pub fn set_temperature(&mut self, temp: InlandParam) {
         self.temperature = temp;
     }
 
-    pub fn set_flatness(&mut self, f: Flatness) {
+    pub fn set_flatness(&mut self, f: InlandParam) {
         self.flatness = f;
+    }
+
+    pub fn set_humidity(&mut self, h: InlandParam) {
+        self.humidity = h;
     }
 }
 
@@ -43,44 +48,37 @@ impl MapGen for Inland {
 
 impl Default for Inland {
     fn default() -> Inland {
-        Inland{seed: None, wrap_map: true, temperature: Temp::Temperate, flatness: Flatness::Bumpy}
+        Inland{
+            seed: None,
+            wrap_map: true,
+            temperature: InlandParam::Medium,
+            flatness: InlandParam::Medium,
+            humidity: InlandParam::Medium
+        }
     }
 }
 
 #[derive(Clone, Copy, Debug)]
-pub enum Temp {
-    Cold,
-    Temperate,
-    Hot,
+pub enum InlandParam {
+    Low,
+    Medium,
+    High,
     Custom(f32)
 }
 
-impl From<Temp> for f32 {
-    fn from(t: Temp) -> f32 {
+impl From<InlandParam> for f32 {
+    fn from(t: InlandParam) -> f32 {
         match t {
-            Temp::Cold => 0.15,
-            Temp::Temperate => 0.5,
-            Temp::Hot => 0.85,
-            Temp::Custom(val) => val.min(1.0).max(0.0)
+            InlandParam::Low => 0.15,
+            InlandParam::Medium => 0.5,
+            InlandParam::High => 0.85,
+            InlandParam::Custom(val) => val.min(1.0).max(0.0)
         }
     }
 }
 
-#[derive(Clone, Copy, Debug)]
-pub enum Flatness {
-    Flat,
-    Bumpy,
-    Rough,
-    Custom(f32)
-}
-
-impl From<Flatness> for f32 {
-    fn from(f: Flatness) -> f32 {
-        match f {
-            Flatness::Flat => 0.15,
-            Flatness::Bumpy => 0.5,
-            Flatness::Rough => 0.85,
-            Flatness::Custom(val) => val.min(1.0).max(0.0)
-        }
+impl Default for InlandParam {
+    fn default() -> InlandParam {
+        InlandParam::Medium
     }
 }

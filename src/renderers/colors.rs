@@ -36,6 +36,8 @@ impl ColorMap {
         cm.set_color_u8(HexType::Desert, (214, 200, 109));
         cm.set_color_u8(HexType::Jungle, (64, 163, 16));
         cm.set_color_u8(HexType::Impassable, (140, 111, 83));
+        cm.set_color_u8(HexType::Swamp, (43, 66, 35));
+        cm.set_color_u8(HexType::Grassland, (186, 207, 97));
         cm
     }
 

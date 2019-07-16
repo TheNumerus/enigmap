@@ -79,7 +79,7 @@ impl Renderer for OGL {
                 let color_diff = rng.gen_range(0.98, 1.02);
                 let mut color = match hex.terrain_type {
                     HexType::Debug(val) => (val, val, val),
-                    HexType::Debug2d((val_x , val_y)) => (val_x, val_y , 0.0),
+                    HexType::Debug2d(val_x , val_y) => (val_x, val_y , 0.0),
                     _ => {
                         let color = self.colors.get_color_f32(&hex.terrain_type);
                         (color.r, color.g, color.b)
@@ -87,7 +87,7 @@ impl Renderer for OGL {
                 };
                 if self.randomize_colors {
                     match hex.terrain_type {
-                        HexType::Debug(_) | HexType::Debug2d(_) => {},
+                        HexType::Debug(_) | HexType::Debug2d(_, _) => {},
                         _ => {
                             color.0 *= color_diff;
                             color.1 *= color_diff;

@@ -306,12 +306,19 @@ impl Sprite {
             if !self.textures.contains_key(key) {
                 self.textures.insert(key.to_owned(), Vec::new());
             }
-            let texture = self.texture_from_path(&format!("/{}.png", key));
+            // if texture folder is not specified, use error texture instead
+            let texture = match &self.texture_folder {
+                Some(_) => self.texture_from_path(&format!("/{}.png", key)),
+                None => Self::generate_error_texture()
+            };
             self.textures.get_mut(key).unwrap().push(texture);
             // check for alternative textures
             let max_textures = self.variations[key];
             for i in 1..max_textures {
-                let texture = self.texture_from_path(&format!("/{}_{}.png", key, i));
+                let texture = match &self.texture_folder {
+                    Some(_) => self.texture_from_path(&format!("/{}_{}.png", key, i)),
+                    None => Self::generate_error_texture()
+                };
                 self.textures.get_mut(key).unwrap().push(texture);
             }
         }
@@ -329,12 +336,18 @@ impl Sprite {
             if !self.textures_cover.contains_key(key) {
                 self.textures_cover.insert(key.to_owned(), Vec::new());
             }
-            let texture = self.texture_from_path(&format!("/{}_cover.png", key));
+            let texture = match &self.texture_folder {
+                Some(_) => self.texture_from_path(&format!("/{}_cover.png", key)),
+                None => Self::generate_error_texture()
+            };
             self.textures_cover.get_mut(key).unwrap().push(texture);
             // check for alternative textures
             let max_textures = self.variations_cover[key];
             for i in 1..max_textures {
-                let texture = self.texture_from_path(&format!("/{}_cover_{}.png", key, i));
+                let texture = match &self.texture_folder {
+                    Some(_) => self.texture_from_path(&format!("/{}_cover_{}.png", key, i)),
+                    None => Self::generate_error_texture()
+                };
                 self.textures_cover.get_mut(key).unwrap().push(texture);
             }
         }
@@ -355,7 +368,7 @@ impl Sprite {
 
     fn texture_from_path(&self, path: &str) -> Image {
         let file = File::open(self.texture_folder.to_owned().unwrap() + path);
-         match file {
+        match file {
             Ok(image) => {
                 let decoder = Decoder::new(image);
                 let (info, mut reader) = decoder.read_info().unwrap();
@@ -479,7 +492,7 @@ impl Renderer for Sprite {
             let data = map.field.iter().filter_map(|hex| {
                 let color = match hex.terrain_type {
                     HexType::Debug(val) => (val, val, val),
-                    HexType::Debug2d((val_x , val_y)) => (val_x, val_y , 0.0),
+                    HexType::Debug2d(val_x , val_y) => (val_x, val_y , 0.0),
                     _ => return None
                 };
                 let mut vec: Vec<Attr> = Vec::new();
@@ -708,10 +721,10 @@ impl Default for Sprite {
         let textures = HashMap::new();
         let textures_cover = HashMap::new();
         for hextype in HexType::get_string_map().keys() {
-            empty_variations.insert(hextype.to_owned(), 0);
-            empty_variations_cover.insert(hextype.to_owned(), 0);
+            empty_variations.insert(hextype.to_owned(), 1);
+            empty_variations_cover.insert(hextype.to_owned(), 1);
         }
-        Sprite{
+        let mut ren = Sprite{
             multiplier: 50.0,
             wrap_map: true,
             texture_folder: None,
@@ -723,7 +736,9 @@ impl Default for Sprite {
             tile_size: 1024,
             textures,
             textures_cover
-        }
+        };
+        ren.load_texture_data();
+        ren
     }
 }
 
