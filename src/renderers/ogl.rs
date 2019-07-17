@@ -141,11 +141,11 @@ impl Renderer for OGL {
     }
 
     fn set_scale(&mut self, scale: f32) {
-        if scale > 0.0 {
+        if scale > 1.0 {
             self.multiplier = scale;
         } else {
             self.multiplier = 50.0;
-            eprintln!("Tried to set negative scale, setting default scale instead.");
+            eprintln!("Tried to set invalid scale, setting default scale instead.");
         }
     }
 

@@ -405,7 +405,7 @@ impl Basic {
             let shared_image_1 = Arc::new(images.remove(0));
             let shared_image_2 = Arc::new(images.remove(0));
             // determine size of chunk
-            let chunk_size = base_image.buffer().len() / num_cpus::get();
+            let chunk_size = (base_image.buffer().len() / num_cpus::get()).max(1);
             let mut threads = Vec::new();
             for (chunk_num, slice) in base_image.buffer.chunks_mut(chunk_size).enumerate() {
                 let shared_image_0 = Arc::clone(&shared_image_0);
@@ -524,11 +524,11 @@ impl Renderer for Basic {
     }
 
     fn set_scale(&mut self, scale: f32) {
-        if scale > 0.0 {
+        if scale > 1.0 {
             self.multiplier = scale;
         } else {
             self.multiplier = 50.0;
-            eprintln!("Tried to set negative scale, setting default scale instead.");
+            eprintln!("Tried to set invalid scale, setting default scale instead.");
         }
     }
 
