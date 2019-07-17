@@ -19,7 +19,14 @@ pub struct OGL {
     /// Size of tiles rendered
     tile_size: u32,
     /// Colormap used while rendering
-    pub colors: ColorMap
+    pub colors: ColorMap,
+    /// Rendering target
+    display: Display,
+    /// Event loop for the window
+    /// Is ununsed in code, but needs to be kept alive for renderer to work correctly
+    _event_loop: glutin::EventsLoop,
+    /// Shaders used in rendering
+    program: Program
 }
 
 impl OGL {
@@ -43,24 +50,14 @@ impl Renderer for OGL {
     type Output = Image;
 
     fn render(&self, map: &HexMap) -> Image {
-        let w = self.tile_size as f64;
-        let h = w;
         let tiles_x = ((map.absolute_size_x * self.multiplier) / self.tile_size as f32).ceil() as u32;
         let tiles_y = ((map.absolute_size_y * self.multiplier) / self.tile_size as f32).ceil() as u32;
-
-        let events_loop = glutin::EventsLoop::new();
-        let size = glutin::dpi::LogicalSize::new(w, h);
-        let window = glutin::WindowBuilder::new().with_visibility(false).with_dimensions(size).with_decorations(false);
-        let context = glutin::ContextBuilder::new().with_multisampling(8);
-        let display = Display::new(window, context, &events_loop).unwrap();
-
-        display.gl_window().hide();
 
         let mut rng = thread_rng();
 
         let shape: Vec<Vertex> = self.get_hex_points(&map.field[0]);
-        implement_vertex!(Vertex, position);
-        let vertex_buffer = VertexBuffer::new(&display, &shape).unwrap();
+        
+        let vertex_buffer = VertexBuffer::new(&self.display, &shape).unwrap();
 
         let indices = index::NoIndices(index::PrimitiveType::TriangleStrip);
 
@@ -107,16 +104,8 @@ impl Renderer for OGL {
                 vec
             }).flatten().collect::<Vec<_>>();
 
-            vertex::VertexBuffer::new(&display, &data).unwrap()
+            vertex::VertexBuffer::new(&self.display, &data).unwrap()
         };
-
-        // keep shaders in different files and include them on compile
-        let vertex_shader_src = include_str!("vert.glsl");
-        let fragment_shader_src = include_str!("frag.glsl");
-
-        let program = Program::from_source(&display, vertex_shader_src, fragment_shader_src, None).unwrap();
-
-        debug_println!("program generated");
 
         let mut tiles: Vec<Vec<u8>> = vec![];
 
@@ -125,7 +114,7 @@ impl Renderer for OGL {
 
         for y in 0..tiles_y {
             for x in 0..tiles_x {
-                let mut target = display.draw();
+                let mut target = self.display.draw();
                 target.clear_color(0.0, 0.0, 0.0, 1.0);
 
                 // x and y are tile offsets
@@ -138,11 +127,11 @@ impl Renderer for OGL {
 
                 let uniforms = uniform!{transform: transform};
                 target.draw((&vertex_buffer, per_instance.per_instance().unwrap()),
-                    &indices, &program, &uniforms, &Default::default()).unwrap();
+                    &indices, &self.program, &uniforms, &Default::default()).unwrap();
                 target.finish().unwrap();
 
                 // reading the front buffer into an image
-                let image: texture::RawImage2d<'_, u8> = display.read_front_buffer();
+                let image: texture::RawImage2d<'_, u8> = self.display.read_front_buffer();
                 let image_data = image.data.into_owned();
                 tiles.push(image_data);
             }
@@ -167,7 +156,32 @@ impl Renderer for OGL {
 
 impl Default for OGL {
     fn default() -> OGL {
-        OGL{multiplier: 50.0, wrap_map: true, randomize_colors: true, tile_size: 1024, colors: ColorMap::new()}
+        let tile_size = 1024;
+        let event_loop = glutin::EventsLoop::new();
+        let size = glutin::dpi::LogicalSize::new(tile_size as f64, tile_size as f64);
+        let window = glutin::WindowBuilder::new().with_visibility(false).with_dimensions(size).with_decorations(false);
+        let context = glutin::ContextBuilder::new().with_multisampling(8);
+        let display = Display::new(window, context, &event_loop).unwrap();
+
+        implement_vertex!(Vertex, position);
+
+        // keep shaders in different files and include them on compile
+        let vertex_shader_src = include_str!("vert.glsl");
+        let fragment_shader_src = include_str!("frag.glsl");
+
+        let program = Program::from_source(&display, vertex_shader_src, fragment_shader_src, None).unwrap();
+
+        display.gl_window().hide();
+        OGL{
+            multiplier: 50.0,
+            wrap_map: true,
+            randomize_colors: true,
+            tile_size,
+            colors: ColorMap::new(),
+            display,
+            _event_loop: event_loop,
+            program
+        }
     }
 }
 

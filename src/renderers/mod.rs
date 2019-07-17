@@ -60,6 +60,14 @@ pub trait Renderer {
     fn tiles_to_image(&self, tiles: &[Vec<u8>], map: &HexMap, multiplier: f32, tile_size: usize) -> Image {
         const CHANNELS: usize = 4;
 
+        //check if tiles have correct size
+        let buf_size = tile_size * tile_size * CHANNELS;
+        for (tile_num, tile) in tiles.iter().enumerate() {
+            if tile.len() != buf_size {
+                panic!("tile #{} has incorrect size, got: {}, expected: {}", tile_num, tile.len(), buf_size);
+            }
+        }
+
         let tiles_x = ((map.absolute_size_x * multiplier) / tile_size as f32).ceil() as usize;
         let target_size_x = (map.absolute_size_x * multiplier) as usize;
         let target_size_y = (map.absolute_size_y * multiplier) as usize;
