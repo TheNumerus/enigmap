@@ -69,8 +69,15 @@ pub trait Renderer {
         }
 
         let tiles_x = ((map.absolute_size_x * multiplier) / tile_size as f32).ceil() as usize;
+        let tiles_y = ((map.absolute_size_y * multiplier) / tile_size as f32).ceil() as usize;
         let target_size_x = (map.absolute_size_x * multiplier) as usize;
         let target_size_y = (map.absolute_size_y * multiplier) as usize;
+
+        // check correct number of tiles
+        if tiles_x * tiles_y != tiles.len() {
+            panic!("incorrect number of tiles, got: {}, expected: {}", tiles.len(), tiles_x * tiles_y);
+        }
+
 
         // create buffer by copying values from tiles
         let mut buffer = vec![0_u8; target_size_x * target_size_y * CHANNELS];

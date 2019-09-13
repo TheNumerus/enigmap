@@ -42,7 +42,7 @@ pub struct Sprite {
     textures: HashMap<String, Vec<Image>>,
     textures_cover: HashMap<String, Vec<Image>>,
     /// Rendering target
-    display: Display,
+    headless: HeadlessRenderer,
     /// Event loop for the window
     /// Is ununsed in code, but needs to be kept alive for renderer to work correctly
     _event_loop: glutin::EventsLoop,
@@ -80,8 +80,8 @@ impl Sprite {
         // try to construct window
         let tile_size = 1024;
 
-        let (display, event_loop) = Self::create_display(tile_size as f64).unwrap();
-        let (program, program_cover, program_debug) = Self::create_programs(&display);
+        let (headless, event_loop) = Self::create_display(tile_size as f64).unwrap();
+        let (program, program_cover, program_debug) = Self::create_programs(&headless);
 
         let mut empty_variations = HashMap::new();
         let mut empty_variations_cover = HashMap::new();
@@ -104,7 +104,7 @@ impl Sprite {
             textures,
             textures_cover,
             _event_loop: event_loop,
-            display,
+            headless,
             program,
             program_cover,
             program_debug
@@ -297,7 +297,7 @@ impl Sprite {
             textures.insert(key.to_owned(), Vec::new());
             for texture in self.textures.get(key).unwrap() {
                 let image = glium::texture::RawImage2d::from_raw_rgba_reversed(texture.buffer(), (texture.width(), texture.height()));
-                let texture = glium::texture::Texture2d::new(&self.display, image).unwrap();
+                let texture = glium::texture::Texture2d::new(&self.headless, image).unwrap();
                 textures.get_mut(key).unwrap().push(texture);
             }
         }
@@ -311,7 +311,7 @@ impl Sprite {
             textures.insert(key.to_owned(), Vec::new());
             for texture in self.textures_cover.get(key).unwrap() {
                 let image = glium::texture::RawImage2d::from_raw_rgba_reversed(texture.buffer(), (texture.width(), texture.height()));
-                let texture = glium::texture::Texture2d::new(&self.display, image).unwrap();
+                let texture = glium::texture::Texture2d::new(&self.headless, image).unwrap();
                 textures.get_mut(key).unwrap().push(texture);
             }
         }
@@ -453,7 +453,7 @@ impl Sprite {
         (coords.0, coords.1, height)
     }
 
-    fn create_programs(display: &Display) -> (Program, Program, Program) {
+    fn create_programs(headless: &HeadlessRenderer) -> (Program, Program, Program) {
         // keep shaders in different files and include them on compile
         let vertex_shader_src = include_str!("vert_sprite.glsl");
         let vertex_shader_debug_src = include_str!("vert.glsl");
@@ -461,21 +461,18 @@ impl Sprite {
         let fragment_shader_cover_src = include_str!("frag_sprite_cover.glsl");
         let fragment_debug_src = include_str!("frag.glsl");
 
-        let program = Program::from_source(display, vertex_shader_src, fragment_shader_src, None).unwrap();
-        let program_cover = Program::from_source(display, vertex_shader_src, fragment_shader_cover_src, None).unwrap();
-        let program_debug = Program::from_source(display, vertex_shader_debug_src, fragment_debug_src, None).unwrap();
+        let program = Program::from_source(headless, vertex_shader_src, fragment_shader_src, None).unwrap();
+        let program_cover = Program::from_source(headless, vertex_shader_src, fragment_shader_cover_src, None).unwrap();
+        let program_debug = Program::from_source(headless, vertex_shader_debug_src, fragment_debug_src, None).unwrap();
 
         (program, program_cover, program_debug)
     }
 
-    fn create_display(tile_size: f64) -> Result<(Display, glutin::EventsLoop), DisplayCreationError> {
+    fn create_display(tile_size: f64) -> Result<(HeadlessRenderer, glutin::EventsLoop), DisplayCreationError> {
         let event_loop = glutin::EventsLoop::new();
-        let size = glutin::dpi::LogicalSize::new(tile_size, tile_size);
-        let window = glutin::WindowBuilder::new().with_visibility(false).with_dimensions(size).with_decorations(false);
-        let context = glutin::ContextBuilder::new().with_multisampling(8).with_depth_buffer(24);
-        let display = Display::new(window, context, &event_loop)?;
-
-        display.gl_window().hide();
+        let size = glutin::dpi::PhysicalSize::new(tile_size, tile_size);
+        let context = glutin::ContextBuilder::new().with_multisampling(8).with_depth_buffer(24).build_headless(&event_loop, size)?;
+        let display = HeadlessRenderer::new(context)?;
 
         Ok((display, event_loop))
     }
@@ -494,10 +491,10 @@ impl Renderer for Sprite {
         let textures_cover = self.load_cover_textures();
 
         let shape: Vec<Vertex> = self.get_hex_points(&map.field[0]);
-        let vertex_buffer = VertexBuffer::new(&self.display, &shape).unwrap();
+        let vertex_buffer = VertexBuffer::new(&self.headless, &shape).unwrap();
 
         let shape_cover: Vec<Vertex> = Sprite::get_cover_shape();
-        let vertex_buffer_cover = VertexBuffer::new(&self.display, &shape_cover).unwrap();
+        let vertex_buffer_cover = VertexBuffer::new(&self.headless, &shape_cover).unwrap();
 
         let indices = index::NoIndices(index::PrimitiveType::TriangleStrip);
 
@@ -543,7 +540,7 @@ impl Renderer for Sprite {
                 Some(vec)
             }).flatten().collect::<Vec<_>>();
 
-            vertex::VertexBuffer::new(&self.display, &data).unwrap()
+            vertex::VertexBuffer::new(&self.headless, &data).unwrap()
         };
 
 
@@ -591,7 +588,7 @@ impl Renderer for Sprite {
                     }
                     Some(vec)
                 }).flatten().collect::<Vec<_>>();
-                let v_buffer = vertex::VertexBuffer::new(&self.display, &data).unwrap();
+                let v_buffer = vertex::VertexBuffer::new(&self.headless, &data).unwrap();
                 if i == 1 {
                     instances.insert(key.to_owned(), v_buffer);
                 } else {
@@ -640,7 +637,7 @@ impl Renderer for Sprite {
                             }
                             Some(vec)
                         }).flatten().collect::<Vec<_>>();
-                        let v_buffer = vertex::VertexBuffer::new(&self.display, &data).unwrap();
+                        let v_buffer = vertex::VertexBuffer::new(&self.headless, &data).unwrap();
                         if i == 1 {
                             instances_cover.insert(key.to_owned(), v_buffer);
                         } else {
@@ -654,10 +651,14 @@ impl Renderer for Sprite {
         let mut tiles: Vec<Vec<u8>> = vec![];
         let scale = self.multiplier / self.tile_size as f32 * 2.0;
 
+        let texture = Texture2d::empty(&self.headless, 1024, 1024).unwrap();
+        let depth = glium::texture::DepthTexture2d::empty(&self.headless, 1024, 1024).unwrap();
+        let mut target = framebuffer::SimpleFrameBuffer::with_depth_buffer(&self.headless, &texture, &depth).unwrap();
+        //let mut target = texture.as_surface();
+
         // rendering
         for y in 0..tiles_y {
             for x in 0..tiles_x {
-                let mut target = self.display.draw();
                 target.clear_color(0.0, 0.0, 0.0, 1.0);
                 target.clear_depth(1.0);
                 // x and y are tile offsets
@@ -711,10 +712,9 @@ impl Renderer for Sprite {
                     target.draw((&vertex_buffer_cover, instances_cover[key].per_instance().unwrap()),
                         &indices, &self.program_cover, &uniforms, &params).unwrap();
                 }
-                target.finish().unwrap();
 
                 // reading the front buffer into an image
-                let image: texture::RawImage2d<'_, u8> = self.display.read_front_buffer();
+                let image: texture::RawImage2d<u8> = texture.read();
                 let image_data = image.data.into_owned();
                 tiles.push(image_data);
             }
@@ -742,8 +742,8 @@ impl Default for Sprite {
         // try to construct window
         let tile_size = 1024;
 
-        let (display, event_loop) = Self::create_display(tile_size as f64).unwrap();
-        let (program, program_cover, program_debug) = Self::create_programs(&display);
+        let (headless, event_loop) = Self::create_display(tile_size as f64).unwrap();
+        let (program, program_cover, program_debug) = Self::create_programs(&headless);
 
         let mut empty_variations = HashMap::new();
         let mut empty_variations_cover = HashMap::new();
@@ -769,7 +769,7 @@ impl Default for Sprite {
             program,
             program_cover,
             program_debug,
-            display
+            headless
         };
         ren.load_texture_data();
         ren

@@ -21,7 +21,7 @@ pub struct OGL {
     /// Colormap used while rendering
     pub colors: ColorMap,
     /// Rendering target
-    display: Display,
+    headless: HeadlessRenderer,
     /// Event loop for the window
     /// Is ununsed in code, but needs to be kept alive for renderer to work correctly
     _event_loop: glutin::EventsLoop,
@@ -57,7 +57,7 @@ impl Renderer for OGL {
 
         let shape: Vec<Vertex> = self.get_hex_points(&map.field[0]);
         
-        let vertex_buffer = VertexBuffer::new(&self.display, &shape).unwrap();
+        let vertex_buffer = VertexBuffer::new(&self.headless, &shape).unwrap();
 
         let indices = index::NoIndices(index::PrimitiveType::TriangleStrip);
 
@@ -104,19 +104,20 @@ impl Renderer for OGL {
                 vec
             }).flatten().collect::<Vec<_>>();
 
-            vertex::VertexBuffer::new(&self.display, &data).unwrap()
+            vertex::VertexBuffer::new(&self.headless, &data).unwrap()
         };
 
         let mut tiles: Vec<Vec<u8>> = vec![];
+
+        let texture = Texture2d::empty(&self.headless, 1024, 1024).unwrap();
+        let mut target = texture.as_surface();
 
         // rendering
         let scale = self.multiplier / self.tile_size as f32 * 2.0;
 
         for y in 0..tiles_y {
             for x in 0..tiles_x {
-                let mut target = self.display.draw();
                 target.clear_color(0.0, 0.0, 0.0, 1.0);
-
                 // x and y are tile offsets
                 let transform: [[f32; 4]; 4] = [
                     [scale, 0.0, 0.0, -1.0 - x as f32 * 2.0],
@@ -128,10 +129,9 @@ impl Renderer for OGL {
                 let uniforms = uniform!{transform: transform};
                 target.draw((&vertex_buffer, per_instance.per_instance().unwrap()),
                     &indices, &self.program, &uniforms, &Default::default()).unwrap();
-                target.finish().unwrap();
 
                 // reading the front buffer into an image
-                let image: texture::RawImage2d<'_, u8> = self.display.read_front_buffer();
+                let image: texture::RawImage2d<u8> = texture.read();
                 let image_data = image.data.into_owned();
                 tiles.push(image_data);
             }
@@ -158,10 +158,9 @@ impl Default for OGL {
     fn default() -> OGL {
         let tile_size = 1024;
         let event_loop = glutin::EventsLoop::new();
-        let size = glutin::dpi::LogicalSize::new(tile_size as f64, tile_size as f64);
-        let window = glutin::WindowBuilder::new().with_visibility(false).with_dimensions(size).with_decorations(false);
-        let context = glutin::ContextBuilder::new().with_multisampling(8);
-        let display = Display::new(window, context, &event_loop).unwrap();
+        let size = glutin::dpi::PhysicalSize::new(tile_size as f64, tile_size as f64);
+        let context = glutin::ContextBuilder::new().with_multisampling(8).build_headless(&event_loop, size).unwrap();
+        let headless = HeadlessRenderer::new(context).unwrap();
 
         implement_vertex!(Vertex, position);
 
@@ -169,16 +168,15 @@ impl Default for OGL {
         let vertex_shader_src = include_str!("vert.glsl");
         let fragment_shader_src = include_str!("frag.glsl");
 
-        let program = Program::from_source(&display, vertex_shader_src, fragment_shader_src, None).unwrap();
+        let program = Program::from_source(&headless, vertex_shader_src, fragment_shader_src, None).unwrap();
 
-        display.gl_window().hide();
         OGL{
             multiplier: 50.0,
             wrap_map: true,
             randomize_colors: true,
             tile_size,
             colors: ColorMap::new(),
-            display,
+            headless,
             _event_loop: event_loop,
             program
         }

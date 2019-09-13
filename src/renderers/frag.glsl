@@ -5,5 +5,5 @@ in vec3 v_color;
 out vec4 color;
 
 void main() {
-    color = vec4(pow(v_color.x, 2.2), pow(v_color.y, 2.2), pow(v_color.z, 2.2), 1.0);
+    color = vec4(v_color, 1.0);
 }
