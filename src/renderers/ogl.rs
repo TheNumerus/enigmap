@@ -3,7 +3,7 @@ use rand::prelude::*;
 
 use crate::hexmap::HexMap;
 use crate::hex::{Hex, HexType, RATIO};
-use crate::renderers::{Image, Renderer};
+use crate::renderers::{Image, Renderer, get_hex_vertex};
 use crate::renderers::colors::ColorMap;
 
 /// Basic hardware renderer
@@ -36,7 +36,7 @@ impl OGL {
         // divide hex into 4 triangles
         let indices = [5,4,0,3,1,2];
         for &i in indices.iter() {
-            verts.push(Vertex::from_tupple(self.get_hex_vertex(hex, i)));
+            verts.push(Vertex::from_tupple(get_hex_vertex(hex, i)));
         }
         verts
     }
@@ -137,7 +137,7 @@ impl Renderer for OGL {
             }
         }
         debug_println!("tiles rendered");
-        self.tiles_to_image(&tiles, map, self.multiplier, self.tile_size as usize)
+        Self::tiles_to_image(&tiles, map, self.multiplier, self.tile_size as usize)
     }
 
     fn set_scale(&mut self, scale: f32) {

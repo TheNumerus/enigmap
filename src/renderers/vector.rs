@@ -64,12 +64,12 @@ impl Vector {
         colors
     }
 
-    fn get_points(&self, hex: &Hex) -> String {
+    fn get_points(hex: &Hex) -> String {
         let mut points = String::new();
         let odd_row = hex.y % 2 == 0;
         // points 2 and 5 are on top and bottom and so they have 0.5 units offset
         for i in 0..6 {
-            let point_f32 = self.get_hex_vertex(hex, i);
+            let point_f32 = Self::get_hex_vertex(hex, i);
             if odd_row ^ (i == 5 || i == 2) {
                 points += format!("{:.0}, {:.3} ", point_f32.0, point_f32.1).as_str();
             } else {
@@ -79,7 +79,7 @@ impl Vector {
         points
     }
 
-    fn get_wrapped_points(&self, hex: &Hex, wrapping: Wrapping, offset: f32) -> String {
+    fn get_wrapped_points(hex: &Hex, wrapping: Wrapping, offset: f32) -> String {
         let indices = match wrapping {
             Wrapping::Left => [0, 1, 2, 5],
             Wrapping::Right => [2, 3, 4, 5]
@@ -87,7 +87,7 @@ impl Vector {
 
         let mut points = String::new();
         for i in &indices {
-            let mut point_f32 = self.get_hex_vertex(hex, *i);
+            let mut point_f32 = Self::get_hex_vertex(hex, *i);
             match wrapping {
                 Wrapping::Right => point_f32.0 += offset,
                 Wrapping::Left => point_f32.0 -= offset
@@ -120,7 +120,7 @@ impl Renderer for Vector {
             let color = format!("#{:02X}{:02X}{:02X}", color[0], color[1], color[2]);
             polygon = polygon.set("fill", color);
 
-            let points = self.get_points(hex);
+            let points = Self::get_points(hex);
             polygon = polygon.set("points", points);
 
             doc = doc.add(polygon);
@@ -143,7 +143,7 @@ impl Renderer for Vector {
                 let color = format!("#{:02X}{:02X}{:02X}", color[0], color[1], color[2]);
                 polygon = polygon.set("fill", color);
 
-                let points = self.get_wrapped_points(hex, wrapping, map.size_x as f32);
+                let points = Self::get_wrapped_points(hex, wrapping, map.size_x as f32);
                 polygon = polygon.set("points", points);
 
                 doc = doc.add(polygon);

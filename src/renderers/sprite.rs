@@ -13,7 +13,7 @@ use std::collections::HashMap;
 
 use crate::hexmap::HexMap;
 use crate::hex::{Hex, HexType, RATIO};
-use crate::renderers::{Image, Renderer, ColorMode};
+use crate::renderers::{Image, Renderer, ColorMode, get_hex_vertex};
 
 /// Textured hardware renderer
 /// 
@@ -59,7 +59,7 @@ impl Sprite {
         // divide hex into 4 triangles
         let indices = [5,4,0,3,1,2];
         for &i in indices.iter() {
-            let vert_pos = self.get_hex_vertex(hex, i);
+            let vert_pos = get_hex_vertex(hex, i);
             let vert_pos = (vert_pos.0, vert_pos.1, 0.0);
             let tex_coords = ((vert_pos.0 - 0.5) / RATIO + 0.5, 1.0 - vert_pos.1 / RATIO);
             verts.push(Vertex::from_tupples(vert_pos, tex_coords));
@@ -720,7 +720,7 @@ impl Renderer for Sprite {
             }
         }
         debug_println!("tiles rendered");
-        self.tiles_to_image(&tiles, map, self.multiplier, self.tile_size as usize)
+        Self::tiles_to_image(&tiles, map, self.multiplier, self.tile_size as usize)
     }
 
     fn set_scale(&mut self, scale: f32) {

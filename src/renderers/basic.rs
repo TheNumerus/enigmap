@@ -6,7 +6,7 @@ use num_cpus;
 
 use crate::hexmap::HexMap;
 use crate::hex::{Hex, HexType};
-use crate::renderers::{Image, Renderer, ColorMode};
+use crate::renderers::{Image, Renderer, ColorMode, get_hex_vertex};
 use crate::renderers::colors::ColorMap;
 
 /// Software renderer
@@ -315,7 +315,7 @@ impl Basic {
         // points need to be in counter clockwise order
         let mut points = [(0.0, 0.0);6];
         for index in 0..6 {
-            let coords = self.get_hex_vertex(hex, index);
+            let coords = get_hex_vertex(hex, index);
             points[5 - index] = (coords.0 * self.multiplier, coords.1 * self.multiplier);
         };
 

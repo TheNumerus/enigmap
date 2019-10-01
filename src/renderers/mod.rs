@@ -2,18 +2,53 @@ use crate::hexmap::HexMap;
 use crate::hex::{Hex, RATIO};
 
 mod basic;
+#[cfg(feature="opengl-rendering")]
 mod ogl;
+#[cfg(feature="opengl-rendering")]
 mod sprite;
+#[cfg(feature="vector-rendering")]
 mod vector;
 pub mod colors;
 
 pub use self::basic::Basic;
+#[cfg(feature="opengl-rendering")]
 pub use self::ogl::OGL;
+#[cfg(feature="opengl-rendering")]
 pub use self::sprite::*;
+#[cfg(feature="vector-rendering")]
 pub use self::vector::Vector;
 
 const HALF_RATIO: f32 = RATIO / 2.0;
 const QUARTER_RATIO: f32 = RATIO / 4.0;
+
+/// Returns `Hex` vertex positon in relative (non-multiplied) coordinates
+/// 
+/// Index starts on upper right vertex and continues clockwise
+/// 
+/// # Panics
+/// when index is out of range `0 <= x <= 5`
+//     5
+//  4     0
+//  3     1
+//     2
+pub fn get_hex_vertex(hex: &Hex, index: usize) -> (f32, f32) {
+    if index > 5 {
+        panic!("index out of range")
+    }
+    // get hex relative coords
+    let mut coords = match index {
+        0 => (0.5, -QUARTER_RATIO),
+        1 => (0.5, QUARTER_RATIO),
+        2 => (0.0, HALF_RATIO),
+        3 => (-0.5, QUARTER_RATIO),
+        4 => (-0.5, -QUARTER_RATIO),
+        _ => (0.0, -HALF_RATIO),
+    };
+    // add absolute coords
+    coords.0 += hex.center_x;
+    coords.1 += hex.center_y;
+    (coords.0, coords.1)
+}
 
 /// Trait for `HexMap` renderers
 pub trait Renderer {
@@ -27,37 +62,10 @@ pub trait Renderer {
     /// Set scale of rendered hexagons
     fn set_scale(&mut self, scale: f32);
 
-    /// Returns `Hex` vertex positon in relative (non-multiplied) coordinates
-    /// 
-    /// Index starts on upper right vertex and continues clockwise
-    /// 
-    /// # Panics
-    /// when index is out of range `0 <= x <= 5`
-    //     5
-    //  4     0
-    //  3     1
-    //     2
-    fn get_hex_vertex(&self, hex: &Hex, index: usize) -> (f32, f32) {
-        if index > 5 {
-            panic!("index out of range")
-        }
-        // get hex relative coords
-        let mut coords = match index {
-            0 => (0.5, -QUARTER_RATIO),
-            1 => (0.5, QUARTER_RATIO),
-            2 => (0.0, HALF_RATIO),
-            3 => (-0.5, QUARTER_RATIO),
-            4 => (-0.5, -QUARTER_RATIO),
-            _ => (0.0, -HALF_RATIO),
-        };
-        // add absolute coords
-        coords.0 += hex.center_x;
-        coords.1 += hex.center_y;
-        (coords.0, coords.1)
-    }
-
     /// Returns image generated from tiles
-    fn tiles_to_image(&self, tiles: &[Vec<u8>], map: &HexMap, multiplier: f32, tile_size: usize) -> Image {
+    fn tiles_to_image(tiles: &[Vec<u8>], map: &HexMap, multiplier: f32, tile_size: usize) -> Image
+        where Self: Sized
+    {
         const CHANNELS: usize = 4;
 
         //check if tiles have correct size

@@ -30,18 +30,11 @@ impl HexMap {
             panic!("One of map dimensions is 0");
         }
 
-        let field: Vec<Hex> = Vec::with_capacity((size_x * size_y) as usize);
+        let field = HexMap::new_field(size_x, size_y);
         let absolute_size_x = size_x as f32 + 0.5;
         let absolute_size_y = RATIO + (size_y - 1) as f32 * RATIO * 0.75;
 
-        let mut map = HexMap{size_x, size_y, field, absolute_size_x, absolute_size_y};
-        for i in 0..(size_x * size_y) {
-            let coords = map.index_to_coords(i);
-            let hex = Hex::from_coords(coords.0, coords.1);
-            map.field.push(hex);
-        }
-
-        map
+        HexMap{size_x, size_y, field, absolute_size_x, absolute_size_y}
     }
 
     /// Converts `x, y` coordinates into index which can be used to access specific `Hex`
@@ -64,6 +57,14 @@ impl HexMap {
         }
         let line = i as i32 / self.size_x as i32;
         let pos = i as i32 - line * self.size_x as i32 - (line / 2);
+        (pos, line)
+    }
+
+    /// Converts index into `(x, y)` coordinates of specific `Hex`
+    /// Does not panic
+    pub fn index_to_coords_unchecked(i: u32, size_x: u32) -> (i32, i32) {
+        let line = i as i32 / size_x as i32;
+        let pos = i as i32 - line * size_x as i32 - (line / 2);
         (pos, line)
     }
 
@@ -111,7 +112,6 @@ impl HexMap {
             Some(idx) => Some(&self.field[idx]),
             None => None
         }
-        //&self.field[index]
     }
 
     /// Returns mutable refrence to hex if giver hex exists
@@ -121,7 +121,6 @@ impl HexMap {
             Some(idx) => Some(&mut self.field[idx]),
             None => None
         }
-        //&mut self.field[index]
     }
 
     /// Sets hex value
@@ -137,6 +136,86 @@ impl HexMap {
         for hex in &mut self.field {
             hex.terrain_type = hextype;
         }
+    }
+
+    /// Resizes map, does not preserve contents
+    pub fn resize(&mut self, new_x: u32, new_y: u32) {
+        self.size_x = new_x;
+        self.size_y = new_y;
+        let dummy_hex = Hex::empty();
+        self.field.resize((new_x * new_y) as usize, dummy_hex);
+        self.absolute_size_x = new_x as f32 + 0.5;
+        self.absolute_size_y = RATIO + (new_y - 1) as f32 * RATIO * 0.75;
+    }
+
+    /// Resizes map, does preserve contents
+    pub fn remap(&mut self, new_x: u32, new_y: u32, extension: HexType) {
+        if self.size_x == new_x && self.size_y == new_y {
+            return;
+        }
+
+        if new_y <= self.size_y && new_x <= self.size_x {
+            // smaller
+            for y in 0..new_y {
+                let start = (y * self.size_x) as usize;
+                let stop = start + new_x as usize;
+                let dest = (y * new_x) as usize;
+                self.field.copy_within(start..=stop, dest);
+            }
+        } else {
+            let mut new_field = HexMap::new_field(new_x, new_y);
+            for hex in new_field.iter_mut() {
+                hex.terrain_type = extension;
+            }
+
+            // now copy old data
+            if new_y <= self.size_y && new_x > self.size_x {
+                // wider
+                for y in 0..new_y {
+                    let start = (y * self.size_x) as usize;
+                    let stop = start + self.size_x as usize;
+                    let start_dest = (y * new_x) as usize;
+                    let stop_dest = start_dest + self.size_x as usize;
+                    new_field[start_dest..stop_dest].copy_from_slice(&self.field[start..stop]);
+                }
+            } else if new_y > self.size_y && new_x <= self.size_x {
+                // longer
+                for y in 0..self.size_y {
+                    let start = (y * self.size_x) as usize;
+                    let stop = start + new_x as usize;
+                    let start_dest = (y * new_x) as usize;
+                    let stop_dest = start_dest + new_x as usize;
+                    new_field[start_dest..stop_dest].copy_from_slice(&self.field[start..stop]);
+                }
+            } else {
+                // bigger
+                for y in 0..self.size_y {
+                    let start = (y * self.size_x) as usize;
+                    let stop = start + self.size_x as usize;
+                    let start_dest = (y * new_x) as usize;
+                    let stop_dest = start_dest + self.size_x as usize;
+                    new_field[start_dest..stop_dest].copy_from_slice(&self.field[start..stop]);
+                }
+            }
+            self.field = new_field;
+        }
+
+        self.size_x = new_x;
+        self.size_y = new_y;
+        self.absolute_size_x = new_x as f32 + 0.5;
+        self.absolute_size_y = RATIO + (new_y - 1) as f32 * RATIO * 0.75;
+    }
+
+    /// Creates new field
+    pub fn new_field(x: u32, y: u32) -> Vec<Hex> {
+        let size = (x * y) as usize;
+        let mut field: Vec<Hex> = Vec::with_capacity(size);
+        for i in 0..size as u32 {
+            let coords = HexMap::index_to_coords_unchecked(i, x);
+            let hex = Hex::from_coords(coords.0, coords.1);
+            field.push(hex);
+        }
+        field
     }
 }
 

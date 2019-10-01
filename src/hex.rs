@@ -120,6 +120,24 @@ impl Hex {
         }
         results.iter().flatten().map(|&s| (s.0, s.1)).collect()
     }
+
+    /// Creates empty hex with center in <0.0, 0.0>
+    pub fn empty() -> Hex {
+        Hex{center_x: 0.0, center_y: 0.0, ..Default::default()}
+    }
+
+    /// Recomputes new coordinates withnout changing `HexType`
+    pub fn reset_coords(&mut self, new_x: i32, new_y: i32) {
+        let center_x = (new_x as f32) + (new_y/2) as f32 + match new_y % 2 {
+            0 => 0.5,
+            1 | _ => 1.0,
+        };
+        let center_y =  (new_y as f32 * RATIO * 3.0 / 4.0) + RATIO / 2.0;
+        self.x = new_x;
+        self.y = new_y;
+        self.center_x = center_x;
+        self.center_y = center_y;        
+    }
 }
 
  impl Default for Hex {
