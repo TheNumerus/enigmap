@@ -2,6 +2,7 @@ use crate::generators::MapGen;
 use crate::hexmap::HexMap;
 use crate::hex::HexType;
 
+#[derive(Debug, Clone, Copy)]
 pub struct Inland {
     seed: Option<u32>,
     wrap_map: bool,
@@ -43,6 +44,10 @@ impl MapGen for Inland {
 
     fn set_seed(&mut self, seed: u32) {
         self.seed = Some(seed);
+    }
+
+    fn reset_seed(&mut self) {
+        self.seed = None;
     }
 }
 

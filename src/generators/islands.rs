@@ -8,6 +8,7 @@ use crate::hex::HexType;
 use crate::generators::MapGen;
 
 /// Generator that generates multiple islands
+#[derive(Debug, Clone, Copy)]
 pub struct Islands {
     seed: u32,
     using_seed: bool,
@@ -295,5 +296,9 @@ impl MapGen for Islands {
     fn set_seed(&mut self, seed: u32) {
         self.using_seed = true;
         self.seed = seed;
+    }
+
+    fn reset_seed(&mut self) {
+        self.using_seed = false;
     }
 }

@@ -37,4 +37,5 @@ impl MapGen for Debug {
     }
 
     fn set_seed(&mut self, _seed: u32) {}
+    fn reset_seed(&mut self) {}
 }

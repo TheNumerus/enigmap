@@ -7,6 +7,7 @@ use crate::generators::MapGen;
 
 
 /// Most basic map generator
+#[derive(Debug, Clone, Copy)]
 pub struct Circle {
     pub ring_size: f32,
     pub ice_falloff: f32,
@@ -158,6 +159,9 @@ impl Circle {
                 base += copy_field[index].1;
                 index+=1;
             }
+            if index == copy_field.len() {
+                index -=1;
+            }
             let field_index = hex_map.coords_to_index(copy_field[index].0.x, copy_field[index].0.y).unwrap();
             let neighbours = copy_field[index].0.get_neighbours(hex_map);
             for neighbour in neighbours {
@@ -273,5 +277,9 @@ impl MapGen for Circle {
 
     fn set_seed(&mut self, seed: u32) {
         self.seed = Some(seed);
+    }
+
+    fn reset_seed(&mut self) {
+        self.seed = None;
     }
 }

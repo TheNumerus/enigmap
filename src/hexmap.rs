@@ -31,8 +31,7 @@ impl HexMap {
         }
 
         let field = HexMap::new_field(size_x, size_y);
-        let absolute_size_x = size_x as f32 + 0.5;
-        let absolute_size_y = RATIO + (size_y - 1) as f32 * RATIO * 0.75;
+        let (absolute_size_x, absolute_size_y) = Self::recalc_abs_size(size_x, size_y);
 
         HexMap{size_x, size_y, field, absolute_size_x, absolute_size_y}
     }
@@ -150,7 +149,7 @@ impl HexMap {
 
     /// Resizes map, does preserve contents
     pub fn remap(&mut self, new_x: u32, new_y: u32, extension: HexType) {
-        if self.size_x == new_x && self.size_y == new_y {
+        if (self.size_x == new_x && self.size_y == new_y) || (new_y == 0 || new_y == 0) {
             return;
         }
 
@@ -162,6 +161,7 @@ impl HexMap {
                 let dest = (y * new_x) as usize;
                 self.field.copy_within(start..=stop, dest);
             }
+            self.field.truncate((new_x * new_y) as usize);
         } else {
             let mut new_field = HexMap::new_field(new_x, new_y);
             for hex in new_field.iter_mut() {
@@ -202,8 +202,18 @@ impl HexMap {
 
         self.size_x = new_x;
         self.size_y = new_y;
-        self.absolute_size_x = new_x as f32 + 0.5;
-        self.absolute_size_y = RATIO + (new_y - 1) as f32 * RATIO * 0.75;
+        let abs_sizes = Self::recalc_abs_size(new_x, new_y);
+        self.absolute_size_x = abs_sizes.0;
+        self.absolute_size_y = abs_sizes.1;
+    }
+
+    pub fn recalc_abs_size(x: u32, y: u32) -> (f32, f32) {
+        let abs_y = RATIO + (y - 1) as f32 * RATIO * 0.75;
+        if y == 1 {
+            (x as f32, abs_y)
+        } else {
+            (x as f32 + 0.5, abs_y)
+        }
     }
 
     /// Creates new field

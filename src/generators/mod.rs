@@ -21,6 +21,9 @@ pub trait MapGen {
     /// Sets seed for noise and rng generators used while generating the map
     fn set_seed(&mut self, seed: u32);
 
+    /// Resets seed and returns it back to random
+    fn reset_seed(&mut self);
+
     /// Converts `u32` seed into `[u8; 32]` which the rng generator uses
     fn seed_to_rng_seed(&self, seed: u32) -> [u8; 32] {
         let mut seed_copy = seed;
