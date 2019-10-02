@@ -1,6 +1,6 @@
 use crate::hexmap::HexMap;
 use crate::hex::{Hex, HexType};
-use crate::renderers::{Renderer, colors::ColorMap};
+use crate::renderers::{Renderer, colors::ColorMap, get_hex_vertex};
 
 use rand::prelude::*;
 
@@ -69,7 +69,7 @@ impl Vector {
         let odd_row = hex.y % 2 == 0;
         // points 2 and 5 are on top and bottom and so they have 0.5 units offset
         for i in 0..6 {
-            let point_f32 = Self::get_hex_vertex(hex, i);
+            let point_f32 = get_hex_vertex(hex, i);
             if odd_row ^ (i == 5 || i == 2) {
                 points += format!("{:.0}, {:.3} ", point_f32.0, point_f32.1).as_str();
             } else {
@@ -87,7 +87,7 @@ impl Vector {
 
         let mut points = String::new();
         for i in &indices {
-            let mut point_f32 = Self::get_hex_vertex(hex, *i);
+            let mut point_f32 = get_hex_vertex(hex, *i);
             match wrapping {
                 Wrapping::Right => point_f32.0 += offset,
                 Wrapping::Left => point_f32.0 -= offset
