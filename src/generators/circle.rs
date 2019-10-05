@@ -152,6 +152,9 @@ impl Circle {
         }
 
         for _number in 0..=mountains_to_spawn {
+            if total_value == 0 {
+                break;
+            }
             let random_number = rng.gen_range(0, total_value);
             let mut base = 0;
             let mut index = 0;
@@ -237,7 +240,7 @@ impl MapGen for Circle {
 
             let mut temperature = 1.0 - dst_to_center_y;
             let mut humidity = 0.5;
-            let surroundings = hex.get_spiral(&old_map, self.ocean_distance);
+            let surroundings = hex.get_spiral(&old_map, self.ocean_distance.max(1));
             let adjust_value = 0.1 / surroundings.len() as f32;
 
             for (other_x, other_y) in surroundings {
@@ -247,7 +250,7 @@ impl MapGen for Circle {
                     None => continue
                 };
                 match other.terrain_type {
-                    HexType::Ocean => {
+                    HexType::Ocean | HexType::Water => {
                         temperature -= adjust_value;
                         humidity += adjust_value * 2.0;
                     },
