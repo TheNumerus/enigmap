@@ -39,6 +39,7 @@ fn render_sw() {
     let _image = ren.render(&map);
 }
 
+#[cfg(feature="opengl-rendering")]
 #[test]
 fn render_ogl() {
     let mut map = HexMap::new(100, 75);
@@ -48,6 +49,7 @@ fn render_ogl() {
     let _image = ren.render(&map);
 }
 
+#[cfg(feature="opengl-rendering")]
 #[test]
 fn render_sprite() {
     let mut map = HexMap::new(100, 75);
@@ -57,7 +59,7 @@ fn render_sprite() {
     let _image = ren.render(&map);
 }
 
-
+#[cfg(feature="vector-rendering")]
 #[test]
 fn render_vector() {
     let mut map = HexMap::new(100, 75);
