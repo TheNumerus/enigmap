@@ -23,7 +23,7 @@ pub struct HexMap {
 }
 
 impl HexMap {
-    /// Creates new `Hexmap` based on dimensions with all `Hex` tiles populated and with correct coordinates
+    /// Creates new `HexMap` based on dimensions with all `Hex` tiles populated and with correct coordinates
     /// Panics when `Option::None` if x or y is 0
     pub fn new(size_x: u32, size_y: u32) -> HexMap {
         if size_x == 0 || size_y == 0 {
