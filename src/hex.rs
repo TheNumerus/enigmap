@@ -163,6 +163,7 @@ pub enum HexType {
     Grassland,
     Debug(f32),
     Debug2d(f32,f32),
+    Debug3d(f32, f32, f32),
 }
 
 impl Distribution<HexType> for Standard {
@@ -201,7 +202,8 @@ impl From<HexType> for i32 {
             HexType::Swamp => 10,
             HexType::Grassland => 11,
             HexType::Debug(_) => 12,
-            HexType::Debug2d(_, _) => 13
+            HexType::Debug2d(_, _) => 13,
+            HexType::Debug3d(_, _, _) => 14
         }
     }
 }
@@ -223,6 +225,7 @@ impl From<i32> for HexType {
             11 => HexType::Grassland,
             12 => HexType::Debug(0.5),
             13 => HexType::Debug2d(0.5,0.5),
+            14 => HexType::Debug3d(0.5, 0.5, 0.5),
             _ => panic!("Hextype index out of range")
         }
     }
@@ -244,7 +247,8 @@ impl From<HexType> for String {
             HexType::Swamp => String::from("Swamp"),
             HexType::Grassland => String::from("Grassland"),
             HexType::Debug(val) => format!("Debug: {}", val),
-            HexType::Debug2d(x,y) => format!("Debug2d: {}, {}", x, y)
+            HexType::Debug2d(x,y) => format!("Debug2d: {}, {}", x, y),
+            HexType::Debug3d(x,y, z) => format!("Debug3d: {}, {}, {}", x, y, z)
         }
     }
 }
@@ -268,7 +272,7 @@ impl HexType {
     }
 
     pub fn get_num_variants() -> usize {
-        14
+        15
     }
 }
 

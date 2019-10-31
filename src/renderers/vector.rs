@@ -41,6 +41,9 @@ impl Vector {
                 HexType::Debug2d(r,g) => {
                     [clamp_color(r * 255.0), clamp_color(g * 255.0), 0]
                 },
+                HexType::Debug3d(r,g, b) => {
+                    [clamp_color(r * 255.0), clamp_color(g * 255.0), clamp_color(b * 255.0)]
+                },
                 _ => {
                     let color = self.colors.get_color_u8(&hex.terrain_type);
                     [color.0, color.1, color.2]

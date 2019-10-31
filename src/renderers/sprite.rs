@@ -526,6 +526,7 @@ impl Renderer for Sprite {
                 let color = match hex.terrain_type {
                     HexType::Debug(val) => (val, val, val),
                     HexType::Debug2d(val_x , val_y) => (val_x, val_y , 0.0),
+                    HexType::Debug3d(val_x, val_y, val_z) => (val_x, val_y, val_z),
                     _ => return None
                 };
                 let mut vec: Vec<Attr> = Vec::new();
