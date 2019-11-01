@@ -458,7 +458,7 @@ impl Basic {
             // dont't randomize color of debug hexes
             if self.randomize_colors {
                 match hex.terrain_type {
-                    HexType::Debug(_) | HexType::Debug2d(_, _) => {},
+                    HexType::Debug(_) | HexType::Debug2d(_, _) | HexType::Debug3d(_, _, _) => {},
                     _ => {
                         for color_channel in &mut color {
                             *color_channel = clamp_color(f32::from(*color_channel) * color_diff);

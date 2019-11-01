@@ -4,3 +4,9 @@ out/*.*
 *.png~
 /.idea
 input
+
+flamegraph.svg
+
+perf.data
+
+*.old
