@@ -117,6 +117,10 @@ impl Inland {
         }
 
         let mut hexes_to_set = hex_map.get_area() - centers.len() as u32;
+        let mut hexes_set = vec![None; hex_map.get_area() as usize];
+        for (index, center) in centers.iter().enumerate() {
+            hexes_set[*center] = Some(index);
+        }
 
         'filler: loop {
             for i in 0..regions.regions.len() {
@@ -130,30 +134,26 @@ impl Inland {
                 let hex_index = rng.gen_range(0, frontiers[i].len());
                 let hex = frontiers[i][hex_index];
 
-                match regions.is_hex_in_regions(hex) {
-                    None => {},
-                    Some(val) => {
-                        if val != i {
-                            frontiers[i].remove(hex_index);
-                            continue;
-                        }
+                if let Some(val) = hexes_set[hex] {
+                    if val != i {
+                        frontiers[i].remove(hex_index);
+                        continue;
                     }
                 }
 
                 frontiers[i].remove(hex_index);
 
                 regions.regions[i].hexes.push(hex);
+                hexes_set[hex] = Some(i);
 
                 let neighbours = hex_map.field[hex].get_neighbours(&hex_map);
 
                 for (x,y) in neighbours {
                     let index = hex_map.coords_to_index(x,y).unwrap();
-                    match regions.is_hex_in_regions(index) {
-                        Some(_) => {},
-                        None => {
-                            if !frontiers[i].contains(&index) {
-                                frontiers[i].push(index);
-                            }
+                    if let None = hexes_set[index] {
+                        if !frontiers[i].contains(&index) {
+                            frontiers[i].push(index);
+                            hexes_set[index] = Some(i);
                         }
                     }
                 }
@@ -295,16 +295,6 @@ struct Regions {
 }
 
 impl Regions {
-    //TODO: this function runs 90% of the time in 400x300 map, it needs heavy optimalization
-    pub fn is_hex_in_regions(&self, hex: usize) -> Option<usize> {
-        for (i, region) in self.regions.iter().enumerate() {
-            if region.hexes.contains(&hex) || region.center == hex {
-                return Some(i);
-            }
-        }
-        None
-    }
-
     pub fn new(len: usize) -> Regions {
         let mut regions = Vec::with_capacity(len);
 
