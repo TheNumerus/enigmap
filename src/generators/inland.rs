@@ -1,6 +1,6 @@
 use crate::generators::MapGen;
 use crate::hexmap::HexMap;
-use crate::hex::HexType;
+use crate::hex::{Hex, HexType};
 
 use rand::prelude::*;
 
@@ -62,6 +62,14 @@ impl Inland {
             }
         }
 
+        let mut rings = vec![vec![];(distance - 1) as usize];
+        let hex = Hex::from_coords(0, 0);
+
+        for r in 1..distance {
+            let ring = hex.get_ring(hex_map, r);
+            rings[r as usize - 1] = ring;
+        }
+
         let mut centers = vec![];
 
         for _i in 0..region_count {
@@ -79,12 +87,13 @@ impl Inland {
             centers.push(hex);
             total_probability -= probabilities[hex];
             probabilities[hex] = 0.0;
+            let (offset_x, offset_y) = HexMap::index_to_coords(hex_map, hex as u32);
             // now update probabilities
             for r in 1..distance {
-                let ring = hex_map.field[hex].get_ring(hex_map, r);
                 let mult = get_mult(r as f32);
-                for (hex_x, hex_y) in ring {
-                    let index = hex_map.coords_to_index(hex_x, hex_y);
+                for (hex_x, hex_y) in &rings[r as usize - 1] {
+                    let coords = Hex::unwrap_coords(hex_x + offset_x, hex_y + offset_y, hex_map.size_x);
+                    let index = hex_map.coords_to_index(coords.0, coords.1);
                     let index = match index {
                         Some(val) => val,
                         None => continue
