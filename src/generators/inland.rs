@@ -175,10 +175,10 @@ impl Inland {
     }
 
     fn decorate_reg(&self, hex_map: &mut HexMap, reg: &Region) {
-        hex_map.field[reg.center].terrain_type = HexType::Debug(0.1);
-
         let debug = false;
+
         if debug {
+            hex_map.field[reg.center].terrain_type = HexType::Debug(0.1);
             for hex in &reg.hexes {
                 hex_map.field[*hex].terrain_type = HexType::Debug3d(reg.temperature, reg.flatness, reg.humidity);
             }
@@ -188,10 +188,14 @@ impl Inland {
         let base = Inland::search_type(reg.temperature, reg.flatness, reg.humidity);
         //dbg!(&base);
         // create base
-        for hex in &reg.hexes {
-            if reg.water_region {
+        if reg.water_region {
+            hex_map.field[reg.center].terrain_type = HexType::Water;
+            for hex in &reg.hexes {
                 hex_map.field[*hex].terrain_type = HexType::Water;
-            } else {
+            }
+        } else {
+            hex_map.field[reg.center].terrain_type = base;
+            for hex in &reg.hexes {
                 hex_map.field[*hex].terrain_type = base;
             }
         }
@@ -232,7 +236,7 @@ impl MapGen for Inland {
             let norm_coords = (coords.0 / hex_map.absolute_size_x, coords.1 / hex_map.absolute_size_y);
 
             let rand: f32 = rng.gen_range(-1.0, 1.0);
-            let temp = 0.10 * rand + f32::from(self.temperature) + 0.2 * -(((norm_coords.1 - 0.5) * 2.0).abs() + 0.5);
+            let temp = 0.10 * rand + f32::from(self.temperature) + 0.2 * -(((norm_coords.1 - 0.5).powi(2) * 4.0).abs() + 0.5);
             region.temperature = temp;
             region.humidity = f32::from(self.humidity) + rng.gen_range(-1.0, 1.0) * 0.15;
             region.flatness = f32::from(self.flatness) + rng.gen_range(-1.0, 1.0) * 0.15;
@@ -324,15 +328,16 @@ impl Regions {
 }
 
 // (type, temp, flatness, humidity)
-const TYPE_COORDS: [(HexType, f32, f32, f32); 10] = [
-    (HexType::Field, 0.6, 0.4, 0.5),
+const TYPE_COORDS: [(HexType, f32, f32, f32); 11] = [
+    (HexType::Field, 0.6, 0.45, 0.5),
+    (HexType::Field, 0.45, 0.45, 0.65),
     (HexType::Forest, 0.4, 0.6, 0.5),
-    (HexType::Desert, 0.8, 0.4, 0.1),
-    (HexType::Tundra, 0.2, 0.5, 0.5),
-    (HexType::Water, 0.5, 0.5, 1.0),
-    (HexType::Mountain, 0.5, 1.0, 0.5),
-    (HexType::Ice, 0.0, 0.5, 0.5),
+    (HexType::Forest, 0.6, 0.6, 0.55),
+    (HexType::Desert, 0.8, 0.5, 0.2),
+    (HexType::Tundra, 0.2, 0.55, 0.4),
+    (HexType::Ice, 0.1, 0.5, 0.5),
     (HexType::Jungle, 0.8, 0.5, 0.8),
-    (HexType::Swamp, 0.5, 0.5, 0.95),
+    (HexType::Swamp, 0.5, 0.5, 0.9),
     (HexType::Grassland, 0.45, 0.6, 0.5),
+    (HexType::Grassland, 0.35, 0.55, 0.3),
 ];
