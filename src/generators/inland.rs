@@ -177,6 +177,14 @@ impl Inland {
     fn decorate_reg(&self, hex_map: &mut HexMap, reg: &Region) {
         hex_map.field[reg.center].terrain_type = HexType::Debug(0.1);
 
+        let debug = false;
+        if debug {
+            for hex in &reg.hexes {
+                hex_map.field[*hex].terrain_type = HexType::Debug3d(reg.temperature, reg.flatness, reg.humidity);
+            }
+            return;
+        }
+
         let base = Inland::search_type(reg.temperature, reg.flatness, reg.humidity);
         //dbg!(&base);
         // create base

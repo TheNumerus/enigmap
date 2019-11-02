@@ -31,9 +31,14 @@ impl Hex {
         Hex{x, y, terrain_type: HexType::Water, center_x, center_y, ..Default::default()}    
     }
 
-    /// Returns dstance to other `Hex`
+    /// Returns distance to other `Hex`
     pub fn distance_to(&self, other: &Hex) -> u32 {
         ((self.x - other.x).abs() + (self.x + self.y - other.x - other.y).abs() + (self.y - other.y).abs()) as u32 / 2
+    }
+
+    /// Returns distance between two coordinates
+    pub fn distance(first_x: i32, first_y: i32, other_x: i32, other_y: i32) -> u32 {
+        ((first_x - other_x).abs() + (first_x + first_y - other_x - other_y).abs() + (first_y - other_y).abs()) as u32 / 2
     }
 
     /// Returns vector of `Hex` tiles next to specified `Hex`
