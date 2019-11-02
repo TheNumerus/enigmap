@@ -30,6 +30,26 @@ impl Inland {
         (area / area_size).max(1)
     }
 
+    fn fade_edge_probability(probabilities: &mut [f32], total_probability: &mut f32, hex_map: &HexMap) {
+        let fadeout = (hex_map.size_y as f32 * 0.1) as u32;
+        for i in 0..fadeout {
+            let fade_strength = (i as f32 / fadeout as f32).sqrt();
+            for x in 0..hex_map.size_x {
+                // top
+                let index = (x + i * hex_map.size_x) as usize;
+                let temp = probabilities[index];
+                probabilities[index] *= fade_strength;
+                *total_probability -= temp - probabilities[index];
+
+                // bottom
+                let index = (x + (hex_map.size_y - 1 - i) * hex_map.size_x) as usize;
+                let temp = probabilities[index];
+                probabilities[index] *= fade_strength;
+                *total_probability -= temp - probabilities[index];
+            }
+        }
+    }
+
     fn generate_centers(&self, hex_map: &HexMap, rng: &mut StdRng) -> Vec<usize> {
         let region_count = self.get_region_count(hex_map);
 
@@ -44,24 +64,9 @@ impl Inland {
         };
 
         // make centers less probable on top and bottom
-        let fadeout = (hex_map.size_y as f32 * 0.1) as u32;
-        for i in 0..fadeout {
-            let fade_strength = (i as f32 / fadeout as f32).sqrt();
-            for x in 0..hex_map.size_x {
-                // top
-                let index = (x + i * hex_map.size_x) as usize;
-                let temp = probabilities[index];
-                probabilities[index] *= fade_strength;
-                total_probability -= temp - probabilities[index];
+        Self::fade_edge_probability(&mut probabilities, &mut total_probability, hex_map);
 
-                // bottom
-                let index = (x + (hex_map.size_y - 1 - i) * hex_map.size_x) as usize;
-                let temp = probabilities[index];
-                probabilities[index] *= fade_strength;
-                total_probability -= temp - probabilities[index];
-            }
-        }
-
+        // cache rings for reuse
         let mut rings = vec![vec![];(distance - 1) as usize];
         let hex = Hex::from_coords(0, 0);
 
@@ -159,11 +164,9 @@ impl Inland {
 
                 for (x,y) in neighbours {
                     let index = hex_map.coords_to_index(x,y).unwrap();
-                    if let None = hexes_set[index] {
-                        if !frontiers[i].contains(&index) {
-                            frontiers[i].push(index);
-                            hexes_set[index] = Some(i);
-                        }
+                    if hexes_set[index].is_none() && !frontiers[i].contains(&index) {
+                        frontiers[i].push(index);
+                        hexes_set[index] = Some(i);
                     }
                 }
 

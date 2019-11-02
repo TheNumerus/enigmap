@@ -149,7 +149,7 @@ impl HexMap {
 
     /// Resizes map, does preserve contents
     pub fn remap(&mut self, new_x: u32, new_y: u32, extension: HexType) {
-        if (self.size_x == new_x && self.size_y == new_y) || (new_y == 0 || new_y == 0) {
+        if (self.size_x == new_x && self.size_y == new_y) || (new_x == 0 || new_y == 0) {
             return;
         }
 
