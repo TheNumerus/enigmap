@@ -98,11 +98,15 @@ impl Hex {
         }
         let mut results: Vec<(i32, i32)> = Vec::with_capacity(6 * radius as usize);
         let mut hex = Hex::from_coords(self.x + radius as i32, self.y - radius as i32);
+        let coords = Hex::unwrap_coords(hex.x, hex.y, hexmap.size_x);
+        hex.x = coords.0;
+        hex.y = coords.1;
         for i in 0..6 {
             for _j in 0..radius {
-                results.push(Hex::unwrap_coords(hex.x, hex.y, hexmap.size_y));
+                results.push((hex.x, hex.y));
                 let neighbour = hex.get_neighbours_unchecked(hexmap)[i];
-                hex = Hex::from_coords(neighbour.0, neighbour.1);
+                hex.x = neighbour.0;
+                hex.y = neighbour.1;
             }
         }
         results

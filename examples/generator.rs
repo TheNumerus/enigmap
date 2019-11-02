@@ -6,6 +6,7 @@ use enigmap::{
 };
 
 use std::{
+    env,
     fs,
     io,
     path::Path,
@@ -16,6 +17,12 @@ use png::HasParameters;
 use ansi_term::Colour;
 
 fn main() {
+    let mut do_render = true;
+    for arg in env::args() {
+        if arg == "--no-render" {
+            do_render = false;
+        }
+    }
     let sizes = get_size();
 
     // initialize map
@@ -41,70 +48,78 @@ fn main() {
         Err(_) => println!("{}", Colour::Fixed(9).paint("Not a number, using random seed")),
     }
 
-    // select renderer
-    let ren_choice = get_u32("renderer choice (0 - basic, 1 - OGL, 2 - sprite, 3..inf - vector)", 0);
-    let mut renderer: Box<dyn Renderer<Output=Image>> = match ren_choice {
-        0 => {
-            let mut ren = Basic::default();
-            // change color of water tiles
-            ren.colors.set_color_u8(HexType::Water, (20, 140, 180));
-            Box::new(ren)
-        },
-        1 => {
-            let mut ren = OGL::default();
-            // change color of oceans
-            ren.colors.set_color_f32(HexType::Ocean, (0.1, 0.3, 0.5));
-            Box::new(ren)
-        },
-        2 => {
-            let mut ren = Sprite::from_folder("./examples/textures");
-            // 2x2 RGBA grey checkerboard pattern 
-            let texture_data = [40, 40, 40, 255, 80, 80, 80, 255, 80, 80, 80, 255, 40, 40, 40, 255];
-            // set mountain texture to provided data
-            ren.set_texture(&texture_data, 2, 2, HexType::Mountain, false);
-            Box::new(ren)
-        },
-        3 | _ => {
-            return render_vector(hexmap, gen);
-        }
-    };
-    renderer.set_scale(20.0);
+    let mut ren_choice = 0;
+
+    if do_render {
+        // select renderer
+        ren_choice = get_u32("renderer choice (0 - basic, 1 - OGL, 2 - sprite, 3..inf - vector)", 0);
+    }
 
     // generate map field
     bencher(| | {
         gen.generate(&mut hexmap);
     }, "Generation", 1);
-    
-    let mut img = None;
 
-    // render image
-    bencher(| | {
-        img = Some(renderer.render(&hexmap));
-    }, "Rendering", 1);
 
-    // create folder for image if needed
-    let path = "./out";
-    if !Path::new(path).exists() {
-        fs::create_dir("./out").unwrap();
-    }
+    if do_render {
+        let mut renderer: Box<dyn Renderer<Output=Image>> = match ren_choice {
+            0 => {
+                let mut ren = Basic::default();
+                // change color of water tiles
+                ren.colors.set_color_u8(HexType::Water, (20, 140, 180));
+                Box::new(ren)
+            },
+            1 => {
+                let mut ren = OGL::default();
+                // change color of oceans
+                ren.colors.set_color_f32(HexType::Ocean, (0.1, 0.3, 0.5));
+                Box::new(ren)
+            },
+            2 => {
+                let mut ren = Sprite::from_folder("./examples/textures");
+                // 2x2 RGBA grey checkerboard pattern
+                let texture_data = [40, 40, 40, 255, 80, 80, 80, 255, 80, 80, 80, 255, 40, 40, 40, 255];
+                // set mountain texture to provided data
+                ren.set_texture(&texture_data, 2, 2, HexType::Mountain, false);
+                Box::new(ren)
+            },
+            3 | _ => {
+                return render_vector(hexmap, gen);
+            }
+        };
+        renderer.set_scale(20.0);
 
-    let img = img.unwrap();
+        let mut img = None;
 
-    // save image
-    bencher(| | {
-        let path = Path::new("./out/image.png");
-        let file = fs::File::create(path).unwrap();
-        let ref mut w = io::BufWriter::new(file);
+        // render image
+        bencher(|| {
+            img = Some(renderer.render(&hexmap));
+        }, "Rendering", 1);
 
-        let mut encoder = png::Encoder::new(w, img.width(), img.height());
-        encoder.set(png::ColorType::RGB).set(png::BitDepth::Eight);
-        if img.is_rgba() {
-            encoder.set(png::ColorType::RGBA);
+        // create folder for image if needed
+        let path = "./out";
+        if !Path::new(path).exists() {
+            fs::create_dir("./out").unwrap();
         }
 
-        let mut writer = encoder.write_header().unwrap();
-        writer.write_image_data(img.buffer()).unwrap();
-    }, "Saving", 1);
+        let img = img.unwrap();
+
+        // save image
+        bencher(|| {
+            let path = Path::new("./out/image.png");
+            let file = fs::File::create(path).unwrap();
+            let ref mut w = io::BufWriter::new(file);
+
+            let mut encoder = png::Encoder::new(w, img.width(), img.height());
+            encoder.set(png::ColorType::RGB).set(png::BitDepth::Eight);
+            if img.is_rgba() {
+                encoder.set(png::ColorType::RGBA);
+            }
+
+            let mut writer = encoder.write_header().unwrap();
+            writer.write_image_data(img.buffer()).unwrap();
+        }, "Saving", 1);
+    }
 }
 
 fn get_u32(name: &str, default: u32) -> u32 {
