@@ -1,4 +1,4 @@
-use crossbeam::thread;
+use crossbeam_utils::thread;
 use std::sync::Arc;
 
 use rand::prelude::*;
