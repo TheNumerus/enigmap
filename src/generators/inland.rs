@@ -119,6 +119,7 @@ impl Inland {
 
         for (i, &reg) in centers.iter().enumerate() {
             regions.regions[i].center = reg;
+            regions.regions[i].hexes.push(reg);
             let neighbours = hex_map.field[reg].get_neighbours(&hex_map);
 
             let mut frontier = Vec::new();
@@ -177,14 +178,14 @@ impl Inland {
         regions
     }
 
-    fn decorate_reg(&self, hex_map: &mut HexMap, reg: &Region) {
+    fn decorate_reg(&self, hex_map: &mut HexMap, reg: &Region, rng: &mut StdRng) {
         let debug = false;
 
         if debug {
-            hex_map.field[reg.center].terrain_type = HexType::Debug(0.1);
             for hex in &reg.hexes {
                 hex_map.field[*hex].terrain_type = HexType::Debug3d(reg.temperature, reg.flatness, reg.humidity);
             }
+            hex_map.field[reg.center].terrain_type = HexType::Debug(0.1);
             return;
         }
 
@@ -192,14 +193,30 @@ impl Inland {
         //dbg!(&base);
         // create base
         if reg.water_region {
-            hex_map.field[reg.center].terrain_type = HexType::Water;
             for hex in &reg.hexes {
                 hex_map.field[*hex].terrain_type = HexType::Water;
             }
         } else {
-            hex_map.field[reg.center].terrain_type = base;
             for hex in &reg.hexes {
                 hex_map.field[*hex].terrain_type = base;
+            }
+
+            let hum_fn = || {
+                reg.humidity.powi(3) * 0.4 - reg.humidity.powi(2) * 0.3 + reg.humidity * 0.08 + 0.01
+            };
+
+            let mountain_fn = || {
+                reg.humidity.powi(3) * 0.3 - reg.humidity.powi(2) * 0.3 + reg.humidity * 0.2 + 0.04
+            };
+
+            // create some lakes and mountains
+            for hex in &reg.hexes {
+                if hum_fn() > rng.gen() {
+                    hex_map.field[*hex].terrain_type = HexType::Water;
+                }
+                if mountain_fn() > rng.gen() {
+                    hex_map.field[*hex].terrain_type = HexType::Mountain;
+                }
             }
         }
     }
@@ -243,10 +260,13 @@ impl MapGen for Inland {
             region.temperature = temp;
             region.humidity = f32::from(self.humidity) + rng.gen_range(-1.0, 1.0) * 0.15;
             region.flatness = f32::from(self.flatness) + rng.gen_range(-1.0, 1.0) * 0.15;
+            if rng.gen::<f32>() > 0.9 {
+                region.water_region = true;
+            }
         }
 
         for reg in &regions.regions {
-            self.decorate_reg(hex_map, reg);
+            self.decorate_reg(hex_map, reg, &mut rng);
         }
     }
 
@@ -298,6 +318,7 @@ impl Default for InlandParam {
 }
 
 #[derive(Debug, Clone)]
+/// First hex in hexes is the center
 struct Region {
     center: usize,
     temperature: f32,
@@ -306,6 +327,7 @@ struct Region {
     water_region: bool,
     hexes: Vec<usize>
 }
+
 
 impl Default for Region {
     fn default() -> Self {
