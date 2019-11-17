@@ -30,10 +30,12 @@ impl Inland {
         (area / area_size).max(1)
     }
 
-    fn fade_edge_probability(probabilities: &mut [f32], total_probability: &mut f32, hex_map: &HexMap) {
+    fn fade_edge_probability(probabilities: &mut [f32], total_probability: &mut f32, hex_map: &HexMap, line_probabs: &mut [f32]) {
         let fadeout = (hex_map.size_y as f32 * 0.1) as u32;
         for i in 0..fadeout {
             let fade_strength = (i as f32 / fadeout as f32).sqrt();
+            line_probabs[i as usize] = fade_strength * hex_map.size_x as f32;
+            line_probabs[hex_map.size_y as usize - i as usize - 1] = fade_strength * hex_map.size_x as f32;
             for x in 0..hex_map.size_x {
                 // top
                 let index = (x + i * hex_map.size_x) as usize;
@@ -50,10 +52,54 @@ impl Inland {
         }
     }
 
+    fn fade_probability_ring(total_probab: &mut f32, probabs: &mut [f32], line_probabs: &mut [f32], ring: &[(i32, i32)], strength: f32, offset: (i32, i32), hex_map: &HexMap) {
+        if strength > 0.995 {
+            return;
+        }
+        for (hex_x, hex_y) in ring {
+            let coords = Hex::unwrap_coords(hex_x + offset.0, hex_y + offset.1, hex_map.size_x);
+            let index = hex_map.coords_to_index(coords.0, coords.1);
+            let index = match index {
+                Some(val) => val,
+                None => continue
+            };
+            let old_prob = probabs[index];
+            probabs[index] *= strength;
+            *total_probab -= old_prob - probabs[index];
+            line_probabs[coords.1 as usize] -= old_prob - probabs[index];
+        }
+    }
+
+    fn random_hex_index(rng: &mut StdRng, total_probability: f32, probabilities: &[f32], line_probabs: &[f32], width: usize) -> (usize, usize) {
+        let random_number = rng.gen::<f32>() * total_probability;
+        let mut total = 0.0;
+        let mut line_guess = 0;
+        let mut hex = 0;
+        for i in 0..line_probabs.len() {
+            if total < random_number {
+                total += line_probabs[i];
+            } else {
+                total -= line_probabs[i - 1];
+                line_guess = i - 1;
+                hex = line_guess * width;
+                break;
+            }
+        }
+        for k in hex..probabilities.len() {
+            if total < random_number {
+                total += probabilities[k];
+            } else {
+                return (k, line_guess);
+            }
+        }
+        (probabilities.len() - 1, line_probabs.len() - 1)
+    }
+
     fn generate_centers(&self, hex_map: &HexMap, rng: &mut StdRng) -> Vec<usize> {
         let region_count = self.get_region_count(hex_map);
 
         let mut probabilities = vec![1.0; hex_map.get_area() as usize];
+        let mut line_probabilities = vec![hex_map.size_x as f32; hex_map.size_y as usize];
         let mut total_probability = hex_map.get_area() as f32;
 
         let distance = (hex_map.get_avg_size() as f32 * 0.2) as u32;
@@ -64,7 +110,7 @@ impl Inland {
         };
 
         // make centers less probable on top and bottom
-        Self::fade_edge_probability(&mut probabilities, &mut total_probability, hex_map);
+        Self::fade_edge_probability(&mut probabilities, &mut total_probability, hex_map, &mut line_probabilities);
 
         // cache rings for reuse
         let mut rings = vec![vec![];(distance - 1) as usize];
@@ -75,38 +121,19 @@ impl Inland {
             rings[r as usize - 1] = ring;
         }
 
-        let mut centers = vec![];
+        let mut centers = Vec::with_capacity(region_count as usize);
 
         for _i in 0..region_count {
-            let random_number = rng.gen::<f32>() * total_probability;
-            let mut total = 0.0;
-            let mut hex = 0;
-            for k in 0..probabilities.len() {
-                if total < random_number {
-                    total += probabilities[k];
-                } else {
-                    hex = k;
-                    break;
-                }
-            };
+            let (hex, line) = Self::random_hex_index(rng, total_probability, &probabilities, &line_probabilities, hex_map.size_x as usize);
             centers.push(hex);
             total_probability -= probabilities[hex];
+            line_probabilities[line] -= probabilities[hex];
             probabilities[hex] = 0.0;
-            let (offset_x, offset_y) = HexMap::index_to_coords(hex_map, hex as u32);
+            let offset = HexMap::index_to_coords(hex_map, hex as u32);
             // now update probabilities
             for r in 1..distance {
                 let mult = get_mult(r as f32);
-                for (hex_x, hex_y) in &rings[r as usize - 1] {
-                    let coords = Hex::unwrap_coords(hex_x + offset_x, hex_y + offset_y, hex_map.size_x);
-                    let index = hex_map.coords_to_index(coords.0, coords.1);
-                    let index = match index {
-                        Some(val) => val,
-                        None => continue
-                    };
-                    let old_prob = probabilities[index];
-                    probabilities[index] *= mult;
-                    total_probability -= old_prob - probabilities[index];
-                }
+                Self::fade_probability_ring(&mut total_probability, &mut probabilities, &mut line_probabilities, &rings[r as usize - 1], mult, offset, hex_map);
             }
         }
 
@@ -190,7 +217,10 @@ impl Inland {
         }
 
         let base = Inland::search_type(reg.temperature, reg.flatness, reg.humidity);
-        //dbg!(&base);
+
+        let mut mountains = Vec::with_capacity(reg.hexes.len());
+        let mut lakes = Vec::with_capacity(reg.hexes.len());
+
         // create base
         if reg.water_region {
             for hex in &reg.hexes {
@@ -213,9 +243,11 @@ impl Inland {
             for hex in &reg.hexes {
                 if hum_fn() > rng.gen() {
                     hex_map.field[*hex].terrain_type = HexType::Water;
+                    lakes.push(*hex);
                 }
                 if mountain_fn() > rng.gen() {
                     hex_map.field[*hex].terrain_type = HexType::Mountain;
+                    mountains.push(*hex);
                 }
             }
         }

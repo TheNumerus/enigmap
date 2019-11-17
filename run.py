@@ -13,6 +13,14 @@ elif len(sys.argv) == 2:
         subprocess.run(["cargo", "run"] + example_args + ['--release', '--'] + [sys.argv[1]])
 elif len(sys.argv) == 3:
     if sys.argv[1] == "flamegraph":
-        subprocess.run(["cargo", "flamegraph"] + example_args + ['--'] + [sys.argv[2]])
+        if sys.argv[2] == "dev":
+            subprocess.run(["cargo", "flamegraph", "--dev"] + example_args)
+        else:
+            subprocess.run(["cargo", "flamegraph"] + example_args + ['--'] + [sys.argv[2]])
+    else:
+        raise Exception("invalid combination of arguments")
+else:
+    if sys.argv[1] == "flamegraph" and sys.argv[2] == "dev":
+        subprocess.run(["cargo", "flamegraph", "--dev"] + example_args + ['--'] + [sys.argv[3]])
     else:
         raise Exception("invalid combination of arguments")
