@@ -76,7 +76,7 @@ impl Inland {
         let mut line_guess = 0;
         let mut hex = 0;
         for i in 0..line_probabs.len() {
-            if total < random_number {
+            if total <= random_number {
                 total += line_probabs[i];
             } else {
                 total -= line_probabs[i - 1];
@@ -210,9 +210,9 @@ impl Inland {
 
         if debug {
             for hex in &reg.hexes {
-                hex_map.field[*hex].terrain_type = HexType::Debug3d(reg.temperature, reg.flatness, reg.humidity);
+                hex_map.field[*hex].terrain_type = HexType::Debug((reg.temperature / 256.0) as u8, (reg.flatness / 256.0) as u8, (reg.humidity / 256.0) as u8);
             }
-            hex_map.field[reg.center].terrain_type = HexType::Debug(0.1);
+            hex_map.field[reg.center].terrain_type = HexType::Debug(20, 20, 20);
             return;
         }
 
@@ -255,7 +255,7 @@ impl Inland {
 
     fn search_type(temp: f32, flat: f32, hum: f32) -> HexType {
         let mut smallest_dist = f32::MAX;
-        let mut best_match = HexType::Debug2d(1.0 , 0.0);
+        let mut best_match = HexType::Debug(255, 0, 0);
         for (hex_type, x, y, z) in &TYPE_COORDS {
             let dist = (((x - temp).powi(2) + (y - flat).powi(2)).sqrt() + (z - hum).powi(2)).sqrt();
             if dist < smallest_dist {

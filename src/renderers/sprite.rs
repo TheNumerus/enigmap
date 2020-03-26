@@ -525,9 +525,7 @@ impl Renderer for Sprite {
 
             let data = map.field.iter().filter_map(|hex| {
                 let color = match hex.terrain_type {
-                    HexType::Debug(val) => (val, val, val),
-                    HexType::Debug2d(val_x , val_y) => (val_x, val_y , 0.0),
-                    HexType::Debug3d(val_x, val_y, val_z) => (val_x, val_y, val_z),
+                    HexType::Debug(val_x, val_y, val_z) => (val_x as f32 * 256.0, val_y as f32 * 256.0, val_z as f32 * 256.0),
                     _ => return None
                 };
                 let mut vec: Vec<Attr> = Vec::new();

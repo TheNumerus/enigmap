@@ -5,18 +5,36 @@ use criterion::Criterion;
 
 use enigmap::{
     HexMap,
-    generators::{MapGen, Inland}
+    generators::{MapGen, Inland, Islands, Circle}
 };
 
-fn gen(x: u32, y: u32) {
-    let mut hexmap = HexMap::new(x, y);
-    let gen = Inland::default();
-    gen.generate(&mut hexmap);
+macro_rules! map_bench {
+    ($c:ident, $t:ty) => {
+        let name = format!("map_{}_small", stringify!($t));
+        $c.bench_function(&name, |b| {
+            let mut map = HexMap::new(60, 40);
+            let gen = <$t>::default();
+            b.iter(|| gen.generate(&mut map))
+        });
+        let name = format!("map_{}_med", stringify!($t));
+        $c.bench_function(&name, |b| {
+            let mut map = HexMap::new(100, 75);
+            let gen = <$t>::default();
+            b.iter(|| gen.generate(&mut map))
+        });
+        let name = format!("map_{}_big", stringify!($t));
+        $c.bench_function(&name, |b| {
+            let mut map = HexMap::new(200, 150);
+            let gen = <$t>::default();
+            b.iter(|| gen.generate(&mut map))
+        });
+    };
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
-    c.bench_function("small_map", |b| b.iter(|| gen(60, 40)));
-    c.bench_function("middle_map", |b| b.iter(|| gen(100, 75)));
+    map_bench!(c, Circle);
+    map_bench!(c, Islands);
+    map_bench!(c, Inland);
 }
 
 criterion_group!(benches, criterion_benchmark);

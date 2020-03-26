@@ -21,27 +21,29 @@ pub const RATIO: f32 = 1.154_700_538_38;
 impl Hex {
     /// Creates new `Hex` from specific coordinates with default `terrain_type`
     pub fn from_coords(x: i32, y: i32) -> Hex {
-        /*let center_x = (x as f32) + (y/2) as f32 + match y % 2 {
-            0 => 0.5,
-            1 | _ => 1.0,
-        };
-        let center_y =  (y as f32 * RATIO * 3.0 / 4.0) + RATIO / 2.0;*/
         Hex{x, y, terrain_type: HexType::Water, decor: Decor::None}
     }
 
     /// Returns center of the `Hex`
     pub fn center(&self) -> (f32, f32) {
+        const HALF_RATIO: f32 = RATIO / 2.0;
+        const THREE_QUARTER_RATIO: f32 = RATIO * 3.0 / 4.0;
         let center_x = (self.x as f32) + (self.y/2) as f32 + match self.y % 2 {
             0 => 0.5,
-            1 | _ => 1.0,
+            _ => 1.0,
         };
-        let center_y =  (self.y as f32 * RATIO * 3.0 / 4.0) + RATIO / 2.0;
+        let center_y = (self.y as f32 * THREE_QUARTER_RATIO) + HALF_RATIO;
         (center_x, center_y)
     }
 
     /// Returns distance to other `Hex`
-    pub fn distance_to(&self, other: &Hex) -> u32 {
+    pub fn distance_between(&self, other: &Hex) -> u32 {
         ((self.x - other.x).abs() + (self.x + self.y - other.x - other.y).abs() + (self.y - other.y).abs()) as u32 / 2
+    }
+
+    /// Returns distance to other coordinates
+    pub fn distance_to(&self, other_x: i32, other_y: i32) -> u32 {
+        ((self.x - other_x).abs() + (self.x + self.y - other_x - other_y).abs() + (self.y - other_y).abs()) as u32 / 2
     }
 
     /// Returns distance between two coordinates
@@ -160,9 +162,7 @@ pub enum HexType {
     Jungle,
     Swamp,
     Grassland,
-    Debug(f32),
-    Debug2d(f32,f32),
-    Debug3d(f32, f32, f32),
+    Debug(u8, u8, u8),
 }
 
 impl Distribution<HexType> for Standard {
@@ -200,9 +200,7 @@ impl From<HexType> for i32 {
             HexType::Jungle => 9,
             HexType::Swamp => 10,
             HexType::Grassland => 11,
-            HexType::Debug(_) => 12,
-            HexType::Debug2d(_, _) => 13,
-            HexType::Debug3d(_, _, _) => 14
+            HexType::Debug(_, _, _) => 12,
         }
     }
 }
@@ -222,9 +220,7 @@ impl From<i32> for HexType {
             9 => HexType::Jungle,
             10 => HexType::Swamp,
             11 => HexType::Grassland,
-            12 => HexType::Debug(0.5),
-            13 => HexType::Debug2d(0.5,0.5),
-            14 => HexType::Debug3d(0.5, 0.5, 0.5),
+            12 => HexType::Debug(0, 0, 0),
             _ => panic!("Hextype index out of range")
         }
     }
@@ -245,9 +241,7 @@ impl From<HexType> for String {
             HexType::Jungle => String::from("Jungle"),
             HexType::Swamp => String::from("Swamp"),
             HexType::Grassland => String::from("Grassland"),
-            HexType::Debug(val) => format!("Debug: {}", val),
-            HexType::Debug2d(x,y) => format!("Debug2d: {}, {}", x, y),
-            HexType::Debug3d(x,y, z) => format!("Debug3d: {}, {}, {}", x, y, z)
+            HexType::Debug(x,y, z) => format!("Debug: {}, {}, {}", x, y, z)
         }
     }
 }
@@ -271,7 +265,7 @@ impl HexType {
     }
 
     pub fn get_num_variants() -> usize {
-        15
+        13
     }
 }
 
@@ -307,14 +301,14 @@ mod tests {
 
     #[test]
     fn distance_hex() {
-        assert_eq!(1, Hex::from_coords(5, 4).distance_to(&Hex::from_coords(6, 4)));
-        assert_eq!(1, Hex::from_coords(5, 4).distance_to(&Hex::from_coords(4, 4)));
-        assert_eq!(1, Hex::from_coords(5, 4).distance_to(&Hex::from_coords(5, 3)));
-        assert_eq!(1, Hex::from_coords(5, 4).distance_to(&Hex::from_coords(6, 3)));
-        assert_eq!(1, Hex::from_coords(5, 4).distance_to(&Hex::from_coords(4, 5)));
-        assert_eq!(1, Hex::from_coords(5, 4).distance_to(&Hex::from_coords(5, 5)));
+        assert_eq!(1, Hex::from_coords(5, 4).distance_between(&Hex::from_coords(6, 4)));
+        assert_eq!(1, Hex::from_coords(5, 4).distance_between(&Hex::from_coords(4, 4)));
+        assert_eq!(1, Hex::from_coords(5, 4).distance_between(&Hex::from_coords(5, 3)));
+        assert_eq!(1, Hex::from_coords(5, 4).distance_between(&Hex::from_coords(6, 3)));
+        assert_eq!(1, Hex::from_coords(5, 4).distance_between(&Hex::from_coords(4, 5)));
+        assert_eq!(1, Hex::from_coords(5, 4).distance_between(&Hex::from_coords(5, 5)));
 
-        assert_eq!(2, Hex::from_coords(-5, 4).distance_to(&Hex::from_coords(-7, 4)));
-        assert_eq!(3, Hex::from_coords(-5, 4).distance_to(&Hex::from_coords(-5, 1)));
+        assert_eq!(2, Hex::from_coords(-5, 4).distance_between(&Hex::from_coords(-7, 4)));
+        assert_eq!(3, Hex::from_coords(-5, 4).distance_between(&Hex::from_coords(-5, 1)));
     }
 }

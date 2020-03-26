@@ -217,11 +217,6 @@ impl Islands {
             return;
         }
 
-        // modified distance function which works with i32's of hexes
-        let distance_to = |hex_x: i32, hex_y: i32, other_x: i32, other_y: i32| {
-            ((hex_x - other_x).abs() + (hex_x + hex_y - other_x - other_y).abs() + (hex_y - other_y).abs()) as u32 / 2
-        };
-
         'hex: for hex in &mut hex_map.field {
             // skip everything thats not ocean
             match hex.terrain_type {
@@ -240,7 +235,7 @@ impl Islands {
             for line in &old_field[min_y..=max_y] {
                 let mut distance_in_line = u32::max_value();
                 for other in line {
-                    let dst = distance_to(hex.x, hex.y, other.0, other.1);
+                    let dst = hex.distance_to( other.0, other.1);
                     // if the second hex on line is further away, don't even compute the whole line
                     if dst > distance_in_line {
                         break;

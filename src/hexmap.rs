@@ -24,7 +24,7 @@ pub struct HexMap {
 
 impl HexMap {
     /// Creates new `HexMap` based on dimensions with all `Hex` tiles populated and with correct coordinates
-    /// Panics when `Option::None` if x or y is 0
+    /// Panics when x or y is 0
     pub fn new(size_x: u32, size_y: u32) -> HexMap {
         if size_x == 0 || size_y == 0 {
             panic!("One of map dimensions is 0");
@@ -209,7 +209,8 @@ impl HexMap {
     }
 
     pub fn recalc_abs_size(x: u32, y: u32) -> (f32, f32) {
-        let abs_y = RATIO + (y - 1) as f32 * RATIO * 0.75;
+        const THREE_QUARTER_RATIO: f32 = RATIO * 3.0 / 4.0;
+        let abs_y = RATIO + (y - 1) as f32 * THREE_QUARTER_RATIO;
         if y == 1 {
             (x as f32, abs_y)
         } else {

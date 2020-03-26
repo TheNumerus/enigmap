@@ -439,15 +439,8 @@ impl Basic {
             let color_diff = rng.gen_range(0.98, 1.02);
 
             let mut color = match hex.terrain_type {
-                HexType::Debug(val) => {
-                    let value = clamp_color(val * 255.0);
-                    [value, value, value]
-                },
-                HexType::Debug2d(r,g) => {
-                    [clamp_color(r * 255.0), clamp_color(g * 255.0), 0]
-                },
-                HexType::Debug3d(r,g, b) => {
-                    [clamp_color(r * 255.0), clamp_color(g * 255.0), clamp_color(b * 255.0)]
+                HexType::Debug(r,g, b) => {
+                    [r, g, b]
                 },
                 _ => {
                     let color = self.colors.get_color_u8(&hex.terrain_type);
@@ -458,7 +451,7 @@ impl Basic {
             // dont't randomize color of debug hexes
             if self.randomize_colors {
                 match hex.terrain_type {
-                    HexType::Debug(_) | HexType::Debug2d(_, _) | HexType::Debug3d(_, _, _) => {},
+                    HexType::Debug(_, _, _) => {},
                     _ => {
                         for color_channel in &mut color {
                             *color_channel = clamp_color(f32::from(*color_channel) * color_diff);
