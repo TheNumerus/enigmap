@@ -442,8 +442,9 @@ impl Sprite {
             _ => (0.0, -bottom_y - RATIO),
         };
         // add absolute coords
-        coords.0 += hex.center_x;
-        coords.1 += hex.center_y;
+        let (hex_center_x, hex_center_y) = hex.center();
+        coords.0 += hex_center_x;
+        coords.1 += hex_center_y;
         // multiply by multiplier
         let height = if index > 3 || index == 0 {
             -0.5
@@ -530,8 +531,9 @@ impl Renderer for Sprite {
                     _ => return None
                 };
                 let mut vec: Vec<Attr> = Vec::new();
+                let (hex_center_x, hex_center_y) = hex.center();
                 vec.push(Attr {
-                    world_position: (hex.center_x - 0.5, hex.center_y - RATIO / 2.0),
+                    world_position: (hex_center_x - 0.5, hex_center_y - RATIO / 2.0),
                     color
                 });
                 if self.wrap_map {
@@ -578,8 +580,9 @@ impl Renderer for Sprite {
                         Sprite::get_rotation(0)
                     };
                     let mut vec: Vec<Attr> = Vec::new();
+                    let (hex_center_x, hex_center_y) = hex.center();
                     vec.push(Attr {
-                        world_position: (hex.center_x - 0.5, hex.center_y - RATIO / 2.0),
+                        world_position: (hex_center_x - 0.5, hex_center_y - RATIO / 2.0),
                         color_diff,
                         rotation
                     });
@@ -627,8 +630,9 @@ impl Renderer for Sprite {
                             // random color
                             let rotation = Sprite::get_rotation(0);
                             let mut vec: Vec<Attr> = Vec::new();
+                            let (hex_center_x, hex_center_y) = hex.center();
                             vec.push(Attr {
-                                world_position: (hex.center_x - 0.5, hex.center_y - RATIO / 2.0),
+                                world_position: (hex_center_x - 0.5, hex_center_y - RATIO / 2.0),
                                 color_diff,
                                 rotation
                             });

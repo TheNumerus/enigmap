@@ -95,7 +95,9 @@ impl Circle {
                 continue;
             }
 
-            let noise_coords = [hex.center_x as f64 * self.noise_scale + seed as f64, hex.center_y as f64 * self.noise_scale];
+            let (hex_center_x, hex_center_y) = hex.center();
+
+            let noise_coords = [hex_center_x as f64 * self.noise_scale + seed as f64, hex_center_y as f64 * self.noise_scale];
             let noise_val = (gen.get(noise_coords) as f32 * self.ocean_distance as f32 * 0.7) as i32;
             //dbg!(noise_val);
             let mut dst_to_land = u32::max_value();
@@ -203,11 +205,12 @@ impl MapGen for Circle {
 
         for hex in &mut hex_map.field {
             // hex info and values
-            let noise_val = p.get([hex.center_x as f64 * self.noise_scale + seed as f64, hex.center_y as f64 * self.noise_scale]) as f32;
-            let secondary_noise_val = p.get([hex.center_x as f64 * self.noise_scale * 4.0 + seed as f64, hex.center_y as f64 * self.noise_scale * 4.0]) as f32;
-            let dst_to_center_x = (hex.center_x - hex_map.absolute_size_x / 2.0).powi(2);
-            let dst_to_center_y = (hex.center_y - hex_map.absolute_size_y / 2.0).powi(2);
-            let dst_to_edge = hex_map.absolute_size_y / 2.0 - (hex.center_y - hex_map.absolute_size_y / 2.0).abs() + noise_val * 3.0;
+            let (hex_center_x, hex_center_y) = hex.center();
+            let noise_val = p.get([hex_center_x as f64 * self.noise_scale + seed as f64, hex_center_y as f64 * self.noise_scale]) as f32;
+            let secondary_noise_val = p.get([hex_center_x as f64 * self.noise_scale * 4.0 + seed as f64, hex_center_y as f64 * self.noise_scale * 4.0]) as f32;
+            let dst_to_center_x = (hex_center_x - hex_map.absolute_size_x / 2.0).powi(2);
+            let dst_to_center_y = (hex_center_y - hex_map.absolute_size_y / 2.0).powi(2);
+            let dst_to_edge = hex_map.absolute_size_y / 2.0 - (hex_center_y - hex_map.absolute_size_y / 2.0).abs() + noise_val * 3.0;
 
             // ice on top and bottom
             // make sure ice is certain to appear
@@ -234,9 +237,10 @@ impl MapGen for Circle {
             };
 
             // hex info and values
-            let noise_val = p.get([hex.center_x as f64 * self.noise_scale + seed as f64, hex.center_y as f64 * self.noise_scale]) as f32;
-            let secondary_noise_val = p.get([hex.center_x as f64 * self.noise_scale * 4.0 + seed as f64, hex.center_y as f64 * self.noise_scale * 4.0]) as f32;
-            let dst_to_center_y = ((hex.center_y * 2.0 - hex_map.absolute_size_y) / hex_map.absolute_size_y).abs();
+            let (hex_center_x, hex_center_y) = hex.center();
+            let noise_val = p.get([hex_center_x as f64 * self.noise_scale + seed as f64, hex_center_y as f64 * self.noise_scale]) as f32;
+            let secondary_noise_val = p.get([hex_center_x as f64 * self.noise_scale * 4.0 + seed as f64, hex_center_y as f64 * self.noise_scale * 4.0]) as f32;
+            let dst_to_center_y = ((hex_center_y * 2.0 - hex_map.absolute_size_y) / hex_map.absolute_size_y).abs();
 
             let mut temperature = 1.0 - dst_to_center_y;
             let mut humidity = 0.5;

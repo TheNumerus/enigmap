@@ -284,7 +284,7 @@ impl MapGen for Inland {
         // create region parameters
         for region in &mut regions.regions {
             let center = hex_map.field[region.center];
-            let coords = (center.center_x, center.center_y);
+            let coords = center.center();
             let norm_coords = (coords.0 / hex_map.absolute_size_x, coords.1 / hex_map.absolute_size_y);
 
             let rand: f32 = rng.gen_range(-1.0, 1.0);

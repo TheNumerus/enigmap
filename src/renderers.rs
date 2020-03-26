@@ -45,8 +45,9 @@ pub fn get_hex_vertex(hex: &Hex, index: usize) -> (f32, f32) {
         _ => (0.0, -HALF_RATIO),
     };
     // add absolute coords
-    coords.0 += hex.center_x;
-    coords.1 += hex.center_y;
+    let (hex_center_x, hex_center_y) = hex.center();
+    coords.0 += hex_center_x;
+    coords.1 += hex_center_y;
     (coords.0, coords.1)
 }
 

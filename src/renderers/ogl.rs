@@ -23,7 +23,7 @@ pub struct OGL {
     /// Rendering target
     headless: HeadlessRenderer,
     /// Event loop for the window
-    /// Is ununsed in code, but needs to be kept alive for renderer to work correctly
+    /// Is unused in code, but needs to be kept alive for renderer to work correctly
     _event_loop: glutin::EventsLoop,
     /// Shaders used in rendering
     program: Program
@@ -94,8 +94,9 @@ impl Renderer for OGL {
                     };
                 }
                 let mut vec: Vec<Attr> = Vec::new();
+                let (hex_center_x, hex_center_y) = hex.center();
                 vec.push(Attr {
-                    world_position: (hex.center_x - 0.5, hex.center_y - RATIO / 2.0),
+                    world_position: (hex_center_x - 0.5, hex_center_y - RATIO / 2.0),
                     color
                 });
                 if self.wrap_map {

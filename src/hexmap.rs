@@ -86,7 +86,8 @@ impl HexMap {
         let mut closest_index = 0;
         let mut min_dst = f32::MAX;
         for (index, hex) in self.field[(y_guess_index + x_guess)..].iter().enumerate() {
-            let dst = ((hex.center_x - x).powi(2) + (hex.center_y - y).powi(2)).sqrt();
+            let hex_center = hex.center();
+            let dst = ((hex_center.0 - x).powi(2) + (hex_center.1 - y).powi(2)).sqrt();
             if min_dst > dst {
                 min_dst = dst;
                 closest_index = index + y_guess_index + x_guess;
@@ -141,7 +142,7 @@ impl HexMap {
     pub fn resize(&mut self, new_x: u32, new_y: u32) {
         self.size_x = new_x;
         self.size_y = new_y;
-        let dummy_hex = Hex::empty();
+        let dummy_hex = Hex::default();
         self.field.resize((new_x * new_y) as usize, dummy_hex);
         self.absolute_size_x = new_x as f32 + 0.5;
         self.absolute_size_y = RATIO + (new_y - 1) as f32 * RATIO * 0.75;

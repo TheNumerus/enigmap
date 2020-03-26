@@ -13,8 +13,6 @@ pub struct Hex {
     pub y: i32,
     pub terrain_type: HexType,
     pub decor: Decor,
-    pub center_x: f32,
-    pub center_y: f32
 }
 
 /// This is roughly ratio of hexagon height to width
@@ -23,12 +21,22 @@ pub const RATIO: f32 = 1.154_700_538_38;
 impl Hex {
     /// Creates new `Hex` from specific coordinates with default `terrain_type`
     pub fn from_coords(x: i32, y: i32) -> Hex {
-        let center_x = (x as f32) + (y/2) as f32 + match y % 2 {
+        /*let center_x = (x as f32) + (y/2) as f32 + match y % 2 {
             0 => 0.5,
             1 | _ => 1.0,
         };
-        let center_y =  (y as f32 * RATIO * 3.0 / 4.0) + RATIO / 2.0;
-        Hex{x, y, terrain_type: HexType::Water, center_x, center_y, ..Default::default()}    
+        let center_y =  (y as f32 * RATIO * 3.0 / 4.0) + RATIO / 2.0;*/
+        Hex{x, y, terrain_type: HexType::Water, decor: Decor::None}
+    }
+
+    /// Returns center of the `Hex`
+    pub fn center(&self) -> (f32, f32) {
+        let center_x = (self.x as f32) + (self.y/2) as f32 + match self.y % 2 {
+            0 => 0.5,
+            1 | _ => 1.0,
+        };
+        let center_y =  (self.y as f32 * RATIO * 3.0 / 4.0) + RATIO / 2.0;
+        (center_x, center_y)
     }
 
     /// Returns distance to other `Hex`
@@ -129,29 +137,11 @@ impl Hex {
         }
         results.iter().flatten().map(|&s| (s.0, s.1)).collect()
     }
-
-    /// Creates empty hex with center in <0.0, 0.0>
-    pub fn empty() -> Hex {
-        Hex{center_x: 0.0, center_y: 0.0, ..Default::default()}
-    }
-
-    /// Recomputes new coordinates withnout changing `HexType`
-    pub fn reset_coords(&mut self, new_x: i32, new_y: i32) {
-        let center_x = (new_x as f32) + (new_y/2) as f32 + match new_y % 2 {
-            0 => 0.5,
-            1 | _ => 1.0,
-        };
-        let center_y =  (new_y as f32 * RATIO * 3.0 / 4.0) + RATIO / 2.0;
-        self.x = new_x;
-        self.y = new_y;
-        self.center_x = center_x;
-        self.center_y = center_y;        
-    }
 }
 
  impl Default for Hex {
     fn default() -> Self {
-        Hex{x:0, y: 0, terrain_type: HexType::Water, center_x: 0.5, center_y: RATIO / 2.0, decor: Decor::None}
+        Hex{x:0, y: 0, terrain_type: HexType::Water, decor: Decor::None}
     }
 }
 
