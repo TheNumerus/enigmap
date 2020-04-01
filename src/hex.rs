@@ -1,9 +1,14 @@
+use bitflags::bitflags;
+use lazy_static::lazy_static;
+
 use rand::{
     distributions::{Distribution, Standard},
     Rng
 };
+
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
+
 use crate::hexmap::HexMap;
 
 #[derive(Debug, Clone, Copy)]
@@ -21,7 +26,7 @@ pub const RATIO: f32 = 1.154_700_538_38;
 impl Hex {
     /// Creates new `Hex` from specific coordinates with default `terrain_type`
     pub fn from_coords(x: i32, y: i32) -> Hex {
-        Hex{x, y, terrain_type: HexType::Water, decor: Decor::None}
+        Hex{x, y, terrain_type: HexType::Water, decor: Decor::empty()}
     }
 
     /// Returns center of the `Hex`
@@ -143,7 +148,7 @@ impl Hex {
 
  impl Default for Hex {
     fn default() -> Self {
-        Hex{x:0, y: 0, terrain_type: HexType::Water, decor: Decor::None}
+        Hex{x:0, y: 0, terrain_type: HexType::Water, decor: Decor::empty()}
     }
 }
 
@@ -246,44 +251,39 @@ impl From<HexType> for String {
     }
 }
 
-impl HexType {
-    pub fn get_string_map() -> HashMap<String, HexType> {
-        let mut map: HashMap<String, HexType> = HashMap::new();
-        map.insert(String::from("Field"), HexType::Field);
-        map.insert(String::from("Forest"), HexType::Forest);
-        map.insert(String::from("Desert"), HexType::Desert);
-        map.insert(String::from("Tundra"), HexType::Tundra);
-        map.insert(String::from("Water"), HexType::Water);
-        map.insert(String::from("Ocean"), HexType::Ocean);
-        map.insert(String::from("Mountain"), HexType::Mountain);
-        map.insert(String::from("Impassable"), HexType::Impassable);
-        map.insert(String::from("Ice"), HexType::Ice);
-        map.insert(String::from("Jungle"), HexType::Jungle);
-        map.insert(String::from("Swamp"), HexType::Swamp);
-        map.insert(String::from("Grassland"), HexType::Grassland);
+lazy_static! {
+    pub static ref HexTypeStrings: HashMap<&'static str, HexType> = {
+        let mut map = HashMap::new();
+        map.insert("Field", HexType::Field);
+        map.insert("Forest", HexType::Forest);
+        map.insert("Desert", HexType::Desert);
+        map.insert("Tundra", HexType::Tundra);
+        map.insert("Water", HexType::Water);
+        map.insert("Ocean", HexType::Ocean);
+        map.insert("Mountain", HexType::Mountain);
+        map.insert("Impassable", HexType::Impassable);
+        map.insert("Ice", HexType::Ice);
+        map.insert("Jungle", HexType::Jungle);
+        map.insert("Swamp", HexType::Swamp);
+        map.insert("Grassland", HexType::Grassland);
         map
-    }
+    };
+}
 
+impl HexType {
     pub fn get_num_variants() -> usize {
         13
     }
 }
 
-
-#[derive(Debug, Copy, Clone)]
-pub enum Decor {
-    None,
-    River,
-    Village,
-    City,
-    Road,
-    Ruin,
-    Hill
-}
-
-impl Default for Decor {
-    fn default() -> Decor {
-        Decor::None
+bitflags! {
+    pub struct Decor: u8 {
+        const RIVER   = 0b00000001;
+        const VILLAGE = 0b00000010;
+        const CITY    = 0b00000100;
+        const ROAD    = 0b00001000;
+        const RUIN    = 0b00010000;
+        const HILL    = 0b00100000;
     }
 }
 

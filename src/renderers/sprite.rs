@@ -12,7 +12,7 @@ use std::io::{ErrorKind, Read};
 use std::collections::HashMap;
 
 use crate::hexmap::HexMap;
-use crate::hex::{Hex, HexType, RATIO};
+use crate::hex::{Hex, HexType, RATIO, HexTypeStrings};
 use crate::renderers::{Image, Renderer, ColorMode, get_hex_vertex};
 
 /// Textured hardware renderer
@@ -87,9 +87,9 @@ impl Sprite {
         let mut empty_variations_cover = HashMap::new();
         let textures = HashMap::new();
         let textures_cover = HashMap::new();
-        for hextype in HexType::get_string_map().keys() {
-            empty_variations.insert(hextype.to_owned(), 1);
-            empty_variations_cover.insert(hextype.to_owned(), 1);
+        for hextype in HexTypeStrings.keys() {
+            empty_variations.insert((**hextype).to_owned(), 1);
+            empty_variations_cover.insert((**hextype).to_owned(), 1);
         }
         let mut renderer = Sprite{
             multiplier: 50.0,
@@ -320,54 +320,53 @@ impl Sprite {
     }
 
     fn load_texture_data(&mut self) {
-        let map = HexType::get_string_map();
-        for key in map.keys() {
-            if !self.textures.contains_key(key) {
-                self.textures.insert(key.to_owned(), Vec::new());
+        for key in HexTypeStrings.keys() {
+            if !self.textures.contains_key(*key) {
+                self.textures.insert((**key).to_owned(), Vec::new());
             }
             // if texture folder is not specified, use error texture instead
             let texture = match &self.texture_folder {
                 Some(_) => self.texture_from_path(&format!("/{}.png", key)),
                 None => Self::generate_error_texture()
             };
-            self.textures.get_mut(key).unwrap().push(texture);
+            self.textures.get_mut(*key).unwrap().push(texture);
             // check for alternative textures
-            let max_textures = self.variations[key];
+            let max_textures = self.variations[*key];
             for i in 1..max_textures {
                 let texture = match &self.texture_folder {
                     Some(_) => self.texture_from_path(&format!("/{}_{}.png", key, i)),
                     None => Self::generate_error_texture()
                 };
-                self.textures.get_mut(key).unwrap().push(texture);
+                self.textures.get_mut(*key).unwrap().push(texture);
             }
         }
         // load cover textures
-        for key in map.keys() {
+        for key in HexTypeStrings.keys() {
             match &self.render_in_25d {
                 Setting::None => break,
                 Setting::All => {},
                 Setting::Some(val) => {
-                    if !val.contains(&map[key]) {
+                    if !val.contains(&HexTypeStrings[*key]) {
                         continue;
                     }
                 }
             };
-            if !self.textures_cover.contains_key(key) {
-                self.textures_cover.insert(key.to_owned(), Vec::new());
+            if !self.textures_cover.contains_key(*key) {
+                self.textures_cover.insert((**key).to_owned(), Vec::new());
             }
             let texture = match &self.texture_folder {
                 Some(_) => self.texture_from_path(&format!("/{}_cover.png", key)),
                 None => Self::generate_error_texture()
             };
-            self.textures_cover.get_mut(key).unwrap().push(texture);
+            self.textures_cover.get_mut(*key).unwrap().push(texture);
             // check for alternative textures
-            let max_textures = self.variations_cover[key];
+            let max_textures = self.variations_cover[*key];
             for i in 1..max_textures {
                 let texture = match &self.texture_folder {
                     Some(_) => self.texture_from_path(&format!("/{}_cover_{}.png", key, i)),
                     None => Self::generate_error_texture()
                 };
-                self.textures_cover.get_mut(key).unwrap().push(texture);
+                self.textures_cover.get_mut(*key).unwrap().push(texture);
             }
         }
     }
@@ -544,20 +543,17 @@ impl Renderer for Sprite {
             vertex::VertexBuffer::new(&self.headless, &data).unwrap()
         };
 
-
-        let hex_type_map = HexType::get_string_map();
-
-        for key in hex_type_map.keys() {
+        for key in HexTypeStrings.keys() {
             let colors = map.field.iter().filter_map(|hex| {
-                if hex.terrain_type != hex_type_map[key] {
+                if hex.terrain_type != HexTypeStrings[*key] {
                     return None
                 }
-                Some(rng.gen_range::<u32, u32, u32>(1, self.variations[key] + 1))
+                Some(rng.gen_range::<u32, u32, u32>(1, self.variations[*key] + 1))
             }).collect::<Vec<u32>>();
-            for i in 1..=self.variations[key] {
+            for i in 1..=self.variations[*key] {
                 let mut colors_iter = colors.iter();
                 let data = map.field.iter().filter_map(|hex| {
-                    let hex_type = hex_type_map[key];
+                    let hex_type = HexTypeStrings[key];
                     if hex.terrain_type != hex_type {
                         return None
                     }
@@ -594,24 +590,24 @@ impl Renderer for Sprite {
                 if i == 1 {
                     instances.insert(key.to_owned(), v_buffer);
                 } else {
-                    instances.insert(format!("{}_{}", key, i - 1), v_buffer);
+                    instances.insert(format!("{}_{}", *key, i - 1), v_buffer);
                 }
             }
         }
         
         if let Setting::None = &self.render_in_25d {} else {
-            for key in hex_type_map.keys() {
+            for key in HexTypeStrings.keys() {
                 let colors = map.field.iter().filter_map(|hex| {
-                    if hex.terrain_type != hex_type_map[key] {
+                    if hex.terrain_type != HexTypeStrings[*key] {
                         return None
                     }
-                    Some(rng.gen_range::<u32, u32, u32>(1, self.variations_cover[key] + 1))
+                    Some(rng.gen_range::<u32, u32, u32>(1, self.variations_cover[*key] + 1))
                 }).collect::<Vec<u32>>();
-                if self.render_in_25d.is_hextype_included(&hex_type_map[key]) {
-                    for i in 1..=self.variations[key] {
+                if self.render_in_25d.is_hextype_included(&HexTypeStrings[*key]) {
+                    for i in 1..=self.variations[*key] {
                         let mut colors_iter = colors.iter();
                         let data = map.field.iter().filter_map(|hex| {
-                            let hex_type = hex_type_map[key];
+                            let hex_type = HexTypeStrings[*key];
                             if hex.terrain_type != hex_type {
                                 return None
                             }
@@ -644,7 +640,7 @@ impl Renderer for Sprite {
                         if i == 1 {
                             instances_cover.insert(key.to_owned(), v_buffer);
                         } else {
-                            instances_cover.insert(format!("{}_{}", key, i - 1), v_buffer);
+                            instances_cover.insert(format!("{}_{}", *key, i - 1), v_buffer);
                         }
                     }
                 }
@@ -752,9 +748,9 @@ impl Default for Sprite {
         let mut empty_variations_cover = HashMap::new();
         let textures = HashMap::new();
         let textures_cover = HashMap::new();
-        for hextype in HexType::get_string_map().keys() {
-            empty_variations.insert(hextype.to_owned(), 1);
-            empty_variations_cover.insert(hextype.to_owned(), 1);
+        for hextype in HexTypeStrings.keys() {
+            empty_variations.insert((**hextype).to_owned(), 1);
+            empty_variations_cover.insert((**hextype).to_owned(), 1);
         }
         let mut ren = Sprite{
             multiplier: 50.0,
@@ -801,11 +797,10 @@ pub enum Setting {
 
 impl Setting {
     fn parse_array(arr: &[Value]) -> Setting {
-        let map = HexType::get_string_map();
         let mut types: Vec<HexType> = Vec::new();
         for val in arr {
             if let Value::String(string) = val {
-                let result = map.get(string);
+                let result = HexTypeStrings.get(string.as_str());
                 if let Some(hextype) = result {
                     types.push(*hextype)
                 }
