@@ -7,11 +7,10 @@ use rand::{
 };
 
 use std::collections::HashMap;
-use std::hash::{Hash, Hasher};
-
+use std::hash::{Hash};
 use crate::hexmap::HexMap;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 /// Data structure for single map tile
 pub struct Hex {
     pub x: i32,
@@ -152,7 +151,7 @@ impl Hex {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 /// Type of terrain / feature on specific 'Hex'
 pub enum HexType {
     Field,
@@ -173,20 +172,6 @@ pub enum HexType {
 impl Distribution<HexType> for Standard {
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> HexType {
         HexType::from(rng.gen_range(0, 11))
-    }
-}
-
-impl PartialEq for HexType {
-    fn eq(&self, other: &Self) -> bool {
-        i32::from(*self) == i32::from(*other)
-    }
-}
-
-impl Eq for HexType {}
-
-impl Hash for HexType {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        (i32::from(*self)).hash(state);
     }
 }
 
@@ -252,7 +237,7 @@ impl From<HexType> for String {
 }
 
 lazy_static! {
-    pub static ref HexTypeStrings: HashMap<&'static str, HexType> = {
+    pub static ref HEX_TYPE_STRINGS: HashMap<&'static str, HexType> = {
         let mut map = HashMap::new();
         map.insert("Field", HexType::Field);
         map.insert("Forest", HexType::Forest);
@@ -279,11 +264,17 @@ impl HexType {
 bitflags! {
     pub struct Decor: u8 {
         const RIVER   = 0b00000001;
-        const VILLAGE = 0b00000010;
         const CITY    = 0b00000100;
+        const VILLAGE = 0b00000010;
         const ROAD    = 0b00001000;
         const RUIN    = 0b00010000;
         const HILL    = 0b00100000;
+    }
+}
+
+impl Default for Decor {
+    fn default() -> Self {
+        Decor::empty()
     }
 }
 

@@ -12,7 +12,7 @@ use std::io::{ErrorKind, Read};
 use std::collections::HashMap;
 
 use crate::hexmap::HexMap;
-use crate::hex::{Hex, HexType, RATIO, HexTypeStrings};
+use crate::hex::{Hex, HexType, RATIO, HEX_TYPE_STRINGS};
 use crate::renderers::{Image, Renderer, ColorMode, get_hex_vertex};
 
 /// Textured hardware renderer
@@ -87,7 +87,7 @@ impl Sprite {
         let mut empty_variations_cover = HashMap::new();
         let textures = HashMap::new();
         let textures_cover = HashMap::new();
-        for hextype in HexTypeStrings.keys() {
+        for hextype in HEX_TYPE_STRINGS.keys() {
             empty_variations.insert((**hextype).to_owned(), 1);
             empty_variations_cover.insert((**hextype).to_owned(), 1);
         }
@@ -320,7 +320,7 @@ impl Sprite {
     }
 
     fn load_texture_data(&mut self) {
-        for key in HexTypeStrings.keys() {
+        for key in HEX_TYPE_STRINGS.keys() {
             if !self.textures.contains_key(*key) {
                 self.textures.insert((**key).to_owned(), Vec::new());
             }
@@ -341,12 +341,12 @@ impl Sprite {
             }
         }
         // load cover textures
-        for key in HexTypeStrings.keys() {
+        for key in HEX_TYPE_STRINGS.keys() {
             match &self.render_in_25d {
                 Setting::None => break,
                 Setting::All => {},
                 Setting::Some(val) => {
-                    if !val.contains(&HexTypeStrings[*key]) {
+                    if !val.contains(&HEX_TYPE_STRINGS[*key]) {
                         continue;
                     }
                 }
@@ -507,8 +507,8 @@ impl Renderer for Sprite {
         }
         implement_vertex!(Attr, world_position, color_diff, rotation);
 
-        let mut instances = HashMap::new();
-        let mut instances_cover = HashMap::new();
+        let mut instances: HashMap<String, _> = HashMap::new();
+        let mut instances_cover: HashMap<String, _> = HashMap::new();
 
         let mut rng = thread_rng();
 
@@ -543,9 +543,9 @@ impl Renderer for Sprite {
             vertex::VertexBuffer::new(&self.headless, &data).unwrap()
         };
 
-        for key in HexTypeStrings.keys() {
+        for key in HEX_TYPE_STRINGS.keys() {
             let colors = map.field.iter().filter_map(|hex| {
-                if hex.terrain_type != HexTypeStrings[*key] {
+                if hex.terrain_type != HEX_TYPE_STRINGS[*key] {
                     return None
                 }
                 Some(rng.gen_range::<u32, u32, u32>(1, self.variations[*key] + 1))
@@ -553,7 +553,7 @@ impl Renderer for Sprite {
             for i in 1..=self.variations[*key] {
                 let mut colors_iter = colors.iter();
                 let data = map.field.iter().filter_map(|hex| {
-                    let hex_type = HexTypeStrings[key];
+                    let hex_type = HEX_TYPE_STRINGS[key];
                     if hex.terrain_type != hex_type {
                         return None
                     }
@@ -588,7 +588,7 @@ impl Renderer for Sprite {
                 }).flatten().collect::<Vec<_>>();
                 let v_buffer = vertex::VertexBuffer::new(&self.headless, &data).unwrap();
                 if i == 1 {
-                    instances.insert(key.to_owned(), v_buffer);
+                    instances.insert(key.to_string(), v_buffer);
                 } else {
                     instances.insert(format!("{}_{}", *key, i - 1), v_buffer);
                 }
@@ -596,18 +596,18 @@ impl Renderer for Sprite {
         }
         
         if let Setting::None = &self.render_in_25d {} else {
-            for key in HexTypeStrings.keys() {
+            for key in HEX_TYPE_STRINGS.keys() {
                 let colors = map.field.iter().filter_map(|hex| {
-                    if hex.terrain_type != HexTypeStrings[*key] {
+                    if hex.terrain_type != HEX_TYPE_STRINGS[*key] {
                         return None
                     }
                     Some(rng.gen_range::<u32, u32, u32>(1, self.variations_cover[*key] + 1))
                 }).collect::<Vec<u32>>();
-                if self.render_in_25d.is_hextype_included(&HexTypeStrings[*key]) {
+                if self.render_in_25d.is_hextype_included(&HEX_TYPE_STRINGS[*key]) {
                     for i in 1..=self.variations[*key] {
                         let mut colors_iter = colors.iter();
                         let data = map.field.iter().filter_map(|hex| {
-                            let hex_type = HexTypeStrings[*key];
+                            let hex_type = HEX_TYPE_STRINGS[*key];
                             if hex.terrain_type != hex_type {
                                 return None
                             }
@@ -638,7 +638,7 @@ impl Renderer for Sprite {
                         }).flatten().collect::<Vec<_>>();
                         let v_buffer = vertex::VertexBuffer::new(&self.headless, &data).unwrap();
                         if i == 1 {
-                            instances_cover.insert(key.to_owned(), v_buffer);
+                            instances_cover.insert(key.to_string(), v_buffer);
                         } else {
                             instances_cover.insert(format!("{}_{}", *key, i - 1), v_buffer);
                         }
@@ -748,7 +748,7 @@ impl Default for Sprite {
         let mut empty_variations_cover = HashMap::new();
         let textures = HashMap::new();
         let textures_cover = HashMap::new();
-        for hextype in HexTypeStrings.keys() {
+        for hextype in HEX_TYPE_STRINGS.keys() {
             empty_variations.insert((**hextype).to_owned(), 1);
             empty_variations_cover.insert((**hextype).to_owned(), 1);
         }
@@ -800,7 +800,7 @@ impl Setting {
         let mut types: Vec<HexType> = Vec::new();
         for val in arr {
             if let Value::String(string) = val {
-                let result = HexTypeStrings.get(string.as_str());
+                let result = HEX_TYPE_STRINGS.get(string.as_str());
                 if let Some(hextype) = result {
                     types.push(*hextype)
                 }
