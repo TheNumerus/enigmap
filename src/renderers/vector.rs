@@ -1,10 +1,12 @@
 use crate::hexmap::HexMap;
-use crate::hex::{Hex, HexType};
+use crate::hex::{Hex, HexType, RATIO};
 use crate::renderers::{Renderer, colors::ColorMap, get_hex_vertex};
 
 use rand::prelude::*;
 
-use svg::{Document, node::element::Polygon};
+use svg::Document;
+use svg::node::Node;
+use svg::node::element::{Definitions, Group, Path, Use};
 
 /// Vector renderer
 /// 
@@ -12,7 +14,9 @@ use svg::{Document, node::element::Polygon};
 pub struct Vector {
     wrap_map: bool,
     randomize_colors: bool,
-    colors: ColorMap
+    colors: ColorMap,
+    scale: f32,
+    pub use_xlink: bool,
 }
 
 impl Vector {
@@ -60,43 +64,49 @@ impl Vector {
         colors
     }
 
-    fn get_points(hex: &Hex) -> String {
-        let mut points = String::new();
-        let odd_row = hex.y % 2 == 0;
-        // points 2 and 5 are on top and bottom and so they have 0.5 units offset
-        for i in 0..6 {
-            let point_f32 = get_hex_vertex(hex, i);
-            if odd_row ^ (i == 5 || i == 2) {
-                points += format!("{:.0}, {:.3} ", point_f32.0, point_f32.1).as_str();
-            } else {
-                points += format!("{:.1}, {:.3} ", point_f32.0, point_f32.1).as_str();
-            }
+    fn get_hex_path(&self) -> String {
+        let hex = Hex::default();
+        let hex_top = get_hex_vertex(&hex, 0);
+        let mut points = format!("M{} {}", hex_top.0 * self.scale, hex_top.1 * self.scale);
+        for i in 1..6 {
+            let point_f32 = get_hex_vertex(&hex, i);
+            points += format!("L{:.1} {:.3} ", point_f32.0 * self.scale, point_f32.1 * self.scale).as_str();
         }
         points
     }
 
-    fn get_wrapped_points(hex: &Hex, wrapping: Wrapping, offset: f32) -> String {
-        let indices = match wrapping {
-            Wrapping::Left => [0, 1, 2, 5],
-            Wrapping::Right => [2, 3, 4, 5]
-        };
-
-        let mut points = String::new();
-        for i in &indices {
-            let mut point_f32 = get_hex_vertex(hex, *i);
-            match wrapping {
-                Wrapping::Right => point_f32.0 += offset,
-                Wrapping::Left => point_f32.0 -= offset
-            }
-            points += format!("{:.1}, {:.3} ", point_f32.0, point_f32.1).as_str();
+    fn get_hex_path_crop(&self) -> String {
+        let hex = Hex::default();
+        let hex_top = get_hex_vertex(&hex, 5);
+        let mut points = format!("M{} {}", hex_top.0 * self.scale, hex_top.1 * self.scale);
+        for i in 0..3 {
+            let point_f32 = get_hex_vertex(&hex, i);
+            points += format!("L{:.1} {:.3} ", point_f32.0 * self.scale, point_f32.1 * self.scale).as_str();
         }
         points
+    }
+
+    /// Sets scale for rendered hexes
+    /// # Panics
+    /// Panics when scale is not a positive number
+    pub fn set_scale(&mut self, scale: f32) {
+        if scale <= 0.0 {
+            panic!("scale cannot be lower than or equal to zero");
+        }
+        self.scale = scale;
+    }
+
+    /// Choose if the svg output should use `xlink:href` or `href` for linking objects.
+    ///
+    /// `xlink:href` was deprecated in SVG 2.0, so this exists as a backward compatibility option
+    pub fn set_use_xlink(&mut self, use_xlink: bool) {
+        self.use_xlink = use_xlink;
     }
 }
 
 impl Default for Vector {
     fn default() -> Vector {
-        Vector{wrap_map: true, randomize_colors: true, colors: ColorMap::default()}
+        Vector{wrap_map: true, randomize_colors: true, colors: ColorMap::default(), scale: 1.0, use_xlink: false}
     }
 }
 
@@ -106,20 +116,50 @@ impl Renderer for Vector {
     fn render(&self, map: &HexMap) -> Document {
         let colors = self.generate_colors(map);
         let mut doc = Document::new()
-            .set("width", map.absolute_size_x)
-            .set("height", map.absolute_size_y);
+            .set("width", map.absolute_size_x * self.scale)
+            .set("height", map.absolute_size_y * self.scale);
+
+        let mut defs = Definitions::new();
+
+        // create hex path and add definition to doc
+        let mut hex_group = Group::new();
+        hex_group.assign("id", "h");
+        let mut path = Path::new();
+        let points = self.get_hex_path();
+        path.assign("d", points);
+        hex_group.append(path);
+
+        defs.append(hex_group);
+
+        // create cropped path and add definition to doc
+        let mut hex_group = Group::new();
+        hex_group.assign("id", "hc");
+        let mut path = Path::new();
+        let points = self.get_hex_path_crop();
+        path.assign("d", points);
+        hex_group.append(path);
+
+        defs.append(hex_group);
+
+        doc.append(defs);
 
         for (index, hex) in map.field.iter().enumerate() {
-            let mut polygon = Polygon::new();
-
             let color = colors[index];
             let color = format!("#{:02X}{:02X}{:02X}", color[0], color[1], color[2]);
-            polygon = polygon.set("fill", color);
 
-            let points = Self::get_points(hex);
-            polygon = polygon.set("points", points);
+            let center = hex.center();
 
-            doc = doc.add(polygon);
+            let mut hex = Use::new();
+            if self.use_xlink {
+                hex.assign("xlink:href", "#h");
+            } else {
+                hex.assign("href", "#h");
+            }
+            hex.assign("fill", color);
+            hex.assign("x", format!("{}", center.0 * self.scale));
+            hex.assign("y", format!("{:.3}", center.1 * self.scale));
+
+            doc.append(hex);
         }
 
         if self.wrap_map {
@@ -133,16 +173,31 @@ impl Renderer for Vector {
                     continue
                 };
 
-                let mut polygon = Polygon::new();
-
                 let color = colors[index];
                 let color = format!("#{:02X}{:02X}{:02X}", color[0], color[1], color[2]);
-                polygon = polygon.set("fill", color);
 
-                let points = Self::get_wrapped_points(hex, wrapping, map.size_x as f32);
-                polygon = polygon.set("points", points);
+                let center = hex.center();
 
-                doc = doc.add(polygon);
+                let mut hex = Use::new();
+                if self.use_xlink {
+                    hex.assign("xlink:href", "#hc");
+                } else {
+                    hex.assign("href", "#hc");
+                }
+                hex.assign("fill", color);
+                let offset = match wrapping {
+                    Wrapping::Left => -(map.size_x as f32) * self.scale,
+                    Wrapping::Right => map.size_x as f32 * self.scale,
+                };
+                hex.assign("x", format!("{}", center.0 * self.scale + offset));
+                hex.assign("y", format!("{:.3}", center.1 * self.scale));
+
+                // rotate halfs if needed
+                if let Wrapping::Right = wrapping {
+                    hex.assign("transform", format!{"rotate(180 {} {})", (center.0 +0.5) * self.scale + offset, (center.1 + RATIO / 2.0) * self.scale});
+                }
+
+                doc.append(hex);
             }
         }
         

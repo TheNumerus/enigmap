@@ -84,7 +84,7 @@ fn main() {
                 Box::new(ren)
             },
             3 | _ => {
-                return render_vector(hexmap, gen);
+                return render_vector(hexmap);
             }
         };
         renderer.set_scale(20.0);
@@ -95,6 +95,9 @@ fn main() {
         bencher(|| {
             img = Some(renderer.render(&hexmap));
         }, "Rendering", 1);
+
+        // we are done with rendering now, so drop opengl stuff
+        std::mem::drop(renderer);
 
         // create folder for image if needed
         let path = "./out";
@@ -164,13 +167,9 @@ fn bencher<T>(mut test: T, name: &str, iter: u32)
     }
 }
 
-fn render_vector(mut hexmap: HexMap, gen: Box<dyn MapGen>) {
-    let renderer = Vector::default();
-
-    // generate map field
-    bencher(| | {
-        gen.generate(&mut hexmap);
-    }, "Generation", 1);
+fn render_vector(hexmap: HexMap) {
+    let mut renderer = Vector::default();
+    renderer.set_scale(10.0);
     
     let mut document = None;
 
