@@ -112,6 +112,41 @@ pub trait Renderer {
         Image::from_buffer(target_size_x as u32, target_size_y as u32, buffer, ColorMode::Rgba)
     }
 
+    /// Adds tile to image buffer
+    fn add_tile_to_image(tile: &[u8], image_buffer: &mut[u8], map: &HexMap, multiplier: f32, tile_size: usize, tile_x: usize, tile_y: usize)
+        where Self: Sized
+    {
+        const CHANNELS: usize = 4;
+
+        //check if tile has correct size
+        let buf_size = tile_size * tile_size * CHANNELS;
+        if tile.len() != buf_size {
+            panic!("tile has incorrect size, got: {}, expected: {}", tile.len(), buf_size);
+        }
+
+        let target_size_x = (map.absolute_size_x * multiplier) as usize;
+        let target_size_y = (map.absolute_size_y * multiplier) as usize;
+
+        let min_x = tile_x * tile_size;
+        let max_x = ((tile_x + 1) * tile_size).min(target_size_x);
+
+        let min_y = tile_y * tile_size;
+        let max_y = ((tile_y + 1) * tile_size).min(target_size_y);
+
+        for y in min_y..max_y {
+            let tile_slice_start = tile_size * (y % tile_size) * CHANNELS;
+
+            let start = (min_x + y * target_size_x) * CHANNELS;
+            let end = (max_x + y * target_size_x) * CHANNELS;
+
+            // get line slice from the buffer to copy values into
+            let (_, slice) = image_buffer.split_at_mut(start);
+            let (slice, _) = slice.split_at_mut(end - start);
+
+            slice.copy_from_slice(&tile[(tile_slice_start)..(tile_slice_start + end - start)]);
+        }
+    }
+
     /// Should the map repeat on the X axis
     fn set_wrap_map(&mut self, value: bool);
 }

@@ -646,14 +646,16 @@ impl Renderer for Sprite {
                 }
             }
         }
-
-        let mut tiles: Vec<Vec<u8>> = vec![];
+        
         let scale = self.multiplier / self.tile_size as f32 * 2.0;
 
         let texture = Texture2d::empty(&self.headless, 1024, 1024).unwrap();
         let depth = glium::texture::DepthTexture2d::empty(&self.headless, 1024, 1024).unwrap();
         let mut target = framebuffer::SimpleFrameBuffer::with_depth_buffer(&self.headless, &texture, &depth).unwrap();
-        //let mut target = texture.as_surface();
+
+        let target_size_x = (map.absolute_size_x * self.multiplier) as usize;
+        let target_size_y = (map.absolute_size_y * self.multiplier) as usize;
+        let mut final_image_buffer = vec![0_u8; target_size_x * target_size_y * 4];
 
         // rendering
         for y in 0..tiles_y {
@@ -714,12 +716,11 @@ impl Renderer for Sprite {
 
                 // reading the front buffer into an image
                 let image: texture::RawImage2d<u8> = texture.read();
-                let image_data = image.data.into_owned();
-                tiles.push(image_data);
+                Self::add_tile_to_image(&image.data, &mut final_image_buffer, map, self.multiplier, 1024, x as usize, y as usize);
             }
         }
-        debug_println!("tiles rendered");
-        Self::tiles_to_image(&tiles, map, self.multiplier, self.tile_size as usize)
+
+        Image::from_buffer(target_size_x as u32, target_size_y as u32, final_image_buffer, ColorMode::Rgba)
     }
 
     fn set_scale(&mut self, scale: f32) {
