@@ -87,7 +87,10 @@ fn main() {
                 return render_vector(hexmap);
             }
         };
-        renderer.set_scale(20.0);
+
+        // create fullHD-ish image
+        let scale = enigmap::renderers::compute_target_scale(&hexmap, 1920);
+        renderer.set_scale(scale);
 
         let mut img = None;
 

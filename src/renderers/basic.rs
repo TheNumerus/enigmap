@@ -44,18 +44,18 @@ impl Basic {
             max_y = max_y.max(point.1);
         };
 
-        max_x = max_x.min(img.width as f32);
-        max_y = max_y.min(img.height as f32);
+        max_x = max_x.min(img.width() as f32);
+        max_y = max_y.min(img.height() as f32);
 
         min_x = min_x.max(0.0);
         min_y = min_y.max(0.0);
 
 
         // properly round float coordinates 
-        let min_x = min_x.max(0.0).min(img.width as f32 - 1.0).round() as i32;
-        let min_y = min_y.max(0.0).min(img.height as f32 - 1.0).round() as i32;
-        let max_x = max_x.max(0.0).min(img.width as f32 - 1.0).round() as i32;
-        let max_y = max_y.max(0.0).min(img.height as f32 - 1.0).round() as i32;
+        let min_x = min_x.max(0.0).min(img.width() as f32 - 1.0).round() as i32;
+        let min_y = min_y.max(0.0).min(img.height() as f32 - 1.0).round() as i32;
+        let max_x = max_x.max(0.0).min(img.width() as f32 - 1.0).round() as i32;
+        let max_y = max_y.max(0.0).min(img.height() as f32 - 1.0).round() as i32;
 
         let mut deltas: Vec<(f32, f32)> = Vec::with_capacity(points.len());
         let mut edges: Vec<f32> = Vec::with_capacity(points.len());
@@ -112,16 +112,16 @@ impl Basic {
 
         // clip with image edges
         // properly round float coordinates 
-        let min_x = points[1].0.max(0.0).min(img.width as f32 - 1.0).round() as i32;
-        let min_y = points[0].1.max(0.0).min(img.height as f32 - 1.0).round() as i32;
-        let max_x = points[5].0.max(0.0).min(img.width as f32 - 1.0).round() as i32;
-        let max_y = points[3].1.max(0.0).min(img.height as f32 - 1.0).round() as i32;
+        let min_x = points[1].0.max(0.0).min(img.width() as f32 - 1.0).round() as i32;
+        let min_y = points[0].1.max(0.0).min(img.height() as f32 - 1.0).round() as i32;
+        let max_x = points[5].0.max(0.0).min(img.width() as f32 - 1.0).round() as i32;
+        let max_y = points[3].1.max(0.0).min(img.height() as f32 - 1.0).round() as i32;
 
         if min_x == max_x || min_y == max_y {
             return;
         }
 
-        let is_cut = min_x == 0 || max_x == (img.width as i32 - 1);
+        let is_cut = min_x == 0 || max_x == (img.width() as i32 - 1);
 
         let mut deltas: [(f32, f32);4] = [(0.0, 0.0); 4];
         let mut edges: [f32;4] = [0.0; 4];
@@ -407,15 +407,15 @@ impl Basic {
             // determine size of chunk
             let chunk_size = (base_image.buffer().len() / num_cpus::get()).max(1);
             let mut threads = Vec::new();
-            for (chunk_num, slice) in base_image.buffer.chunks_mut(chunk_size).enumerate() {
+            for (chunk_num, slice) in base_image.buffer_mut().chunks_mut(chunk_size).enumerate() {
                 let shared_image_0 = Arc::clone(&shared_image_0);
                 let shared_image_1 = Arc::clone(&shared_image_1);
                 let shared_image_2 = Arc::clone(&shared_image_2);
                 threads.push(s.spawn(move |_| {
                     // create slices of image data of the same size
-                    let image_0_slice = shared_image_0.buffer.chunks(chunk_size).collect::<Vec<&[u8]>>()[chunk_num];
-                    let image_1_slice = shared_image_1.buffer.chunks(chunk_size).collect::<Vec<&[u8]>>()[chunk_num];
-                    let image_2_slice = shared_image_2.buffer.chunks(chunk_size).collect::<Vec<&[u8]>>()[chunk_num];
+                    let image_0_slice = shared_image_0.buffer().chunks(chunk_size).collect::<Vec<&[u8]>>()[chunk_num];
+                    let image_1_slice = shared_image_1.buffer().chunks(chunk_size).collect::<Vec<&[u8]>>()[chunk_num];
+                    let image_2_slice = shared_image_2.buffer().chunks(chunk_size).collect::<Vec<&[u8]>>()[chunk_num];
                     for (i, value) in slice.iter_mut().enumerate() {
                         *value = ((*value as u32 + image_0_slice[i] as u32 + image_1_slice[i] as u32 + image_2_slice[i] as u32) / 4) as u8;
                     }
