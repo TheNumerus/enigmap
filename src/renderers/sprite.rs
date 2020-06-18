@@ -1,5 +1,6 @@
 use glium::*;
 use glium::backend::glutin::DisplayCreationError;
+use glium::glutin::event_loop::EventLoop;
 
 use rand::prelude::*;
 use png::Decoder;
@@ -45,7 +46,7 @@ pub struct Sprite {
     headless: HeadlessRenderer,
     /// Event loop for the window
     /// Is ununsed in code, but needs to be kept alive for renderer to work correctly
-    _event_loop: glutin::EventsLoop,
+    _event_loop: EventLoop<()>,
     /// Shaders used in rendering
     program: Program,
     program_cover: Program,
@@ -80,7 +81,7 @@ impl Sprite {
         // try to construct window
         let tile_size = 1024;
 
-        let (headless, event_loop) = Self::create_display(tile_size as f64).unwrap();
+        let (headless, event_loop) = Self::create_display(tile_size).unwrap();
         let (program, program_cover, program_debug) = Self::create_programs(&headless);
 
         let mut empty_variations = HashMap::new();
@@ -468,8 +469,8 @@ impl Sprite {
         (program, program_cover, program_debug)
     }
 
-    fn create_display(tile_size: f64) -> Result<(HeadlessRenderer, glutin::EventsLoop), DisplayCreationError> {
-        let event_loop = glutin::EventsLoop::new();
+    fn create_display(tile_size: u32) -> Result<(HeadlessRenderer, EventLoop<()>), DisplayCreationError> {
+        let event_loop = EventLoop::new();
         let size = glutin::dpi::PhysicalSize::new(tile_size, tile_size);
         let context = glutin::ContextBuilder::new().with_multisampling(8).with_depth_buffer(24).build_headless(&event_loop, size)?;
         let display = HeadlessRenderer::new(context)?;
@@ -742,7 +743,7 @@ impl Default for Sprite {
         // try to construct window
         let tile_size = 1024;
 
-        let (headless, event_loop) = Self::create_display(tile_size as f64).unwrap();
+        let (headless, event_loop) = Self::create_display(tile_size).unwrap();
         let (program, program_cover, program_debug) = Self::create_programs(&headless);
 
         let mut empty_variations = HashMap::new();

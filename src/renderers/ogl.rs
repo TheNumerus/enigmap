@@ -1,4 +1,5 @@
 use glium::*;
+use glium::glutin::event_loop::EventLoop;
 use rand::prelude::*;
 
 use crate::hexmap::HexMap;
@@ -24,7 +25,7 @@ pub struct OGL {
     headless: HeadlessRenderer,
     /// Event loop for the window
     /// Is unused in code, but needs to be kept alive for renderer to work correctly
-    _event_loop: glutin::EventsLoop,
+    _event_loop: EventLoop<()>,
     /// Shaders used in rendering
     program: Program
 }
@@ -158,8 +159,8 @@ impl Renderer for OGL {
 impl Default for OGL {
     fn default() -> OGL {
         let tile_size = 1024;
-        let event_loop = glutin::EventsLoop::new();
-        let size = glutin::dpi::PhysicalSize::new(tile_size as f64, tile_size as f64);
+        let event_loop = EventLoop::new();
+        let size = glutin::dpi::PhysicalSize::new(tile_size, tile_size);
         let context = glutin::ContextBuilder::new().with_multisampling(8).build_headless(&event_loop, size).unwrap();
         let headless = HeadlessRenderer::new(context).unwrap();
 

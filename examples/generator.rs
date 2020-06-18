@@ -13,7 +13,6 @@ use std::{
     time::Instant
 };
 
-use png::HasParameters;
 use ansi_term::Colour;
 
 fn main() {
@@ -117,9 +116,12 @@ fn main() {
             let ref mut w = io::BufWriter::new(file);
 
             let mut encoder = png::Encoder::new(w, img.width(), img.height());
-            encoder.set(png::ColorType::RGB).set(png::BitDepth::Eight);
+            encoder.set_depth(png::BitDepth::Eight);
+
             if img.is_rgba() {
-                encoder.set(png::ColorType::RGBA);
+                encoder.set_color(png::ColorType::RGBA);
+            } else {
+                encoder.set_color(png::ColorType::RGB);
             }
 
             let mut writer = encoder.write_header().unwrap();
