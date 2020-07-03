@@ -2,8 +2,8 @@ use glium::*;
 use glium::glutin::event_loop::EventLoop;
 use rand::prelude::*;
 
-use crate::hexmap::HexMap;
-use crate::hex::{Hex, HexType, RATIO};
+use enigmap::{HexMap, Hex, HexType, RATIO};
+
 use crate::renderers::{Image, Renderer, get_hex_vertex, ColorMode};
 use crate::renderers::colors::ColorMap;
 

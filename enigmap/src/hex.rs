@@ -1,5 +1,6 @@
 use bitflags::bitflags;
 use lazy_static::lazy_static;
+use serde::Serialize;
 
 use rand::{
     distributions::{Distribution, Standard},
@@ -10,7 +11,7 @@ use std::collections::HashMap;
 use std::hash::{Hash};
 use crate::hexmap::HexMap;
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Serialize)]
 /// Data structure for single map tile
 pub struct Hex {
     pub x: i32,
@@ -151,7 +152,7 @@ impl Hex {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
 /// Type of terrain / feature on specific 'Hex'
 pub enum HexType {
     Field,
@@ -262,6 +263,7 @@ impl HexType {
 }
 
 bitflags! {
+    #[derive(Serialize)]
     pub struct Decor: u8 {
         const RIVER   = 0b00000001;
         const CITY    = 0b00000100;

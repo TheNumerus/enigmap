@@ -12,8 +12,8 @@ use std::fs::File;
 use std::io::{ErrorKind, Read};
 use std::collections::HashMap;
 
-use crate::hexmap::HexMap;
-use crate::hex::{Hex, HexType, RATIO, HEX_TYPE_STRINGS};
+use enigmap::{HexMap, Hex, HexType, RATIO, HEX_TYPE_STRINGS};
+
 use crate::renderers::{Image, Renderer, ColorMode, get_hex_vertex};
 
 /// Textured hardware renderer
@@ -181,7 +181,6 @@ impl Sprite {
         }
         renderer.load_texture_data();
 
-        debug_println!("{:?}", settings);
         renderer
     }
 

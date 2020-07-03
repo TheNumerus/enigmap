@@ -1,8 +1,11 @@
 use enigmap::{
     prelude::*,
-    renderers::{Basic, OGL, Sprite, Vector, Image},
     generators::{Circle, Islands, Inland, Debug},
     HexType
+};
+
+use enigmap_renderer::{
+    renderers::{Basic, OGL, Sprite, Vector, Image, Renderer},
 };
 
 use std::{
@@ -88,7 +91,7 @@ fn main() {
         };
 
         // create fullHD-ish image
-        let scale = enigmap::renderers::compute_target_scale(&hexmap, 1920);
+        let scale = enigmap_renderer::renderers::compute_target_scale(&hexmap, 1920);
         renderer.set_scale(scale);
 
         let mut img = None;

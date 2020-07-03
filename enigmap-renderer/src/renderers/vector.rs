@@ -1,5 +1,5 @@
-use crate::hexmap::HexMap;
-use crate::hex::{Hex, HexType, RATIO};
+use enigmap::{HexMap, Hex, HexType, RATIO};
+
 use crate::renderers::{Renderer, colors::ColorMap, get_hex_vertex};
 
 use rand::prelude::*;

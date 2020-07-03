@@ -1,22 +1,15 @@
-use crate::hexmap::HexMap;
-use crate::hex::{Hex, RATIO};
+use enigmap::{HexMap, Hex, RATIO};
 
 mod basic;
-#[cfg(feature="opengl-rendering")]
 mod ogl;
-#[cfg(feature="opengl-rendering")]
 mod sprite;
-#[cfg(feature="vector-rendering")]
 mod vector;
 pub mod colors;
 pub mod image;
 
 pub use self::basic::Basic;
-#[cfg(feature="opengl-rendering")]
 pub use self::ogl::OGL;
-#[cfg(feature="opengl-rendering")]
 pub use self::sprite::*;
-#[cfg(feature="vector-rendering")]
 pub use self::vector::Vector;
 pub use self::image::{Image, ColorMode};
 

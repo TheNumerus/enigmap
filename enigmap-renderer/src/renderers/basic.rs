@@ -4,8 +4,8 @@ use std::sync::Arc;
 use rand::prelude::*;
 use num_cpus;
 
-use crate::hexmap::HexMap;
-use crate::hex::{Hex, HexType};
+use enigmap::{HexMap, Hex, HexType};
+
 use crate::renderers::{Image, Renderer, ColorMode, get_hex_vertex};
 use crate::renderers::colors::ColorMap;
 

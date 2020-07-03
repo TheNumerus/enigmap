@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use crate::HexType;
+use enigmap::HexType;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Color {

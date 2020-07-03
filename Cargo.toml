@@ -1,52 +1,10 @@
-[package]
-name = "enigmap"
-version = "0.1.0"
-authors = ["Petr Volf <Petr.volf216@gmail.com>"]
-edition = "2018"
-description = "Hexagonal map generator and renderer"
-license = "MIT"
-repository = "https://github.com/TheNumerus/enigmap"
-exclude = [
-    ".vscode/*",
-    "out/*"
+[workspace]
+
+members = [
+	"enigmap",
+	"enigmap-renderer",
+	"enigmap-server",
 ]
-
-[features]
-opengl-rendering = ["glium", "toml", "png"]
-vector-rendering = ["svg"]
-
-[dependencies]
-rand = "0.7.3"
-noise = {version = "0.6.0", default-features = false}
-glium = {version = "0.27.0", optional = true}
-toml = {version = "0.5.6", optional = true}
-png = {version = "0.16.5", optional = true}
-num_cpus = "1.13.0"
-crossbeam-utils = "0.7"
-svg = {version = "0.8", optional = true}
-bitflags = "1.2"
-lazy_static = "1.4"
-
-[dev-dependencies]
-criterion = "0.2"
-ansi_term = "0.11.0"
-png = "0.16.5"
-
-[[bench]]
-name = "generators"
-harness = false
-
-[[bench]]
-name = "hexmap"
-harness = false
-
-[[bench]]
-name = "renderers"
-harness = false
 
 [profile.release]
 debug = true
-
-[[example]]
-name = "generator"
-required-features = ["opengl-rendering", "vector-rendering"]

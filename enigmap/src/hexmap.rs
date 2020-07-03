@@ -1,7 +1,9 @@
 use std::f32;
 use crate::hex::{RATIO, Hex, HexType};
 
-#[derive(Debug, Clone)]
+use serde::Serialize;
+
+#[derive(Debug, Clone, Serialize)]
 /// Base data structure for generated map
 pub struct HexMap {
     /// Number of `Hex` tiles in X direction

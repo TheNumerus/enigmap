@@ -1,0 +1,31 @@
+[package]
+name = "enigmap"
+version = "0.1.0"
+authors = ["Petr Volf <Petr.volf216@gmail.com>"]
+edition = "2018"
+description = "Hexagonal map generator and renderer"
+license = "MIT"
+repository = "https://github.com/TheNumerus/enigmap"
+exclude = [
+    ".vscode/*",
+    "out/*"
+]
+
+[dependencies]
+rand = "0.7.3"
+noise = {version = "0.6.0", default-features = false}
+bitflags = "1.2"
+lazy_static = "1.4"
+# TODO move to feature
+serde = { version = "1.0", features = ["derive"] }
+
+[dev-dependencies]
+criterion = "0.2"
+
+[[bench]]
+name = "generators"
+harness = false
+
+[[bench]]
+name = "hexmap"
+harness = false
